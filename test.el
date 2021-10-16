@@ -1,14 +1,14 @@
 ;; 启用 font-lock 时设置文本外观应使用 font-lock-face 文本属性，未启用 font-lock 时应使用 face 属性.
 
 ;; 对战双方
-(defconst side-blue "蓝方" "蓝方")
-(defconst side-red "红方" "红方")
+(defconst side-blue '(name "蓝方" color "blue"))
+(defconst side-red '(name "红方" color "red"))
+
+(defconst regexp-cn "[^\x00-\xff]" "中文字符正则串")
 
 (defvar chess-init "")
-(defvar chess-init-blue "")
-(defvar chess-init-red "")
 
-(setq chess-init-blue 
+(setq chess-init 
 "車----馬----象----士----將----士----象----馬----車
 |     |     |     | \\   |   / |     |     |     |
 |     |     |     |   \\ | /   |     |     |     |
@@ -23,10 +23,7 @@
 |     |     |     |     |     |     |     |     |
 +-----+-----+-----+-----+-----+-----+-----+-----+
 |                                               |
-")
-
-(setq chess-init-red 
-"|                                               | 
+|                                               | 
 +-----+-----+-----+-----+-----+-----+-----+-----+
 |     |     |     |     |     |     |     |     |
 |     |     |     |     |     |     |     |     |
@@ -41,24 +38,24 @@
 |     |     |     | /   |   \\ |     |     |     |
 車----馬----相----仕----帅----仕----相----馬----車")
 
+(defconst chess-init-length (length chess-init))
 
-(setq chess-init-blue (replace-regexp-in-string "卒" (propertize "卒" 'font-lock-face '(:background "blue")) chess-init-blue))
-(setq chess-init-blue (replace-regexp-in-string "炮" (propertize "炮" 'font-lock-face '(:background "blue")) chess-init-blue))
-(setq chess-init-blue (replace-regexp-in-string "車" (propertize "車" 'font-lock-face '(:background "blue")) chess-init-blue))
-(setq chess-init-blue (replace-regexp-in-string "馬" (propertize "馬" 'font-lock-face '(:background "blue")) chess-init-blue))
-(setq chess-init-blue (replace-regexp-in-string "象" (propertize "象" 'font-lock-face '(:background "blue")) chess-init-blue))
-(setq chess-init-blue (replace-regexp-in-string "士" (propertize "士" 'font-lock-face '(:background "blue")) chess-init-blue))
-(setq chess-init-blue (replace-regexp-in-string "將" (propertize "將" 'font-lock-face '(:background "blue")) chess-init-blue))
+(let ((start 0))
+  (while (string-match regexp-cn chess-init start)  ;; 匹配中文
+    ;;(princ (match-data))
+    (put-text-property   ;; 添加队伍属性
+      (match-beginning 0)
+      (match-end 0)
+      'font-lock-face
+      (if
+        (< (match-beginning 0) (/ chess-init-length 2))
+        '(:background "blue")
+        '(:background "red"))
+      chess-init)
+    (setq start (match-end 0))))
 
-(setq chess-init-red (replace-regexp-in-string "兵" (propertize "兵" 'font-lock-face '(:background "red")) chess-init-red))
-(setq chess-init-red (replace-regexp-in-string "炮" (propertize "炮" 'font-lock-face '(:background "red")) chess-init-red))
-(setq chess-init-red (replace-regexp-in-string "車" (propertize "車" 'font-lock-face '(:background "red")) chess-init-red))
-(setq chess-init-red (replace-regexp-in-string "馬" (propertize "馬" 'font-lock-face '(:background "red")) chess-init-red))
-(setq chess-init-red (replace-regexp-in-string "相" (propertize "相" 'font-lock-face '(:background "red")) chess-init-red))
-(setq chess-init-red (replace-regexp-in-string "仕" (propertize "仕" 'font-lock-face '(:background "red")) chess-init-red))
-(setq chess-init-red (replace-regexp-in-string "帅" (propertize "帅" 'font-lock-face '(:background "red")) chess-init-red))
+;;(get-text-property 0 'font-lock-face chess-init)
 
-(setq chess-init (concat chess-init-blue chess-init-red))
+
 
 (insert chess-init)
-
