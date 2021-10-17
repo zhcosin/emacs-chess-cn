@@ -1,8 +1,8 @@
 ;; 启用 font-lock 时设置文本外观应使用 font-lock-face 文本属性，未启用 font-lock 时应使用 face 属性.
 
 ;; 对战双方
-(defconst side-blue '(name "蓝方" color "blue"))
-(defconst side-red '(name "红方" color "red"))
+(defconst side-blue '(name "蓝方" style (:background "blue")))
+(defconst side-red '(name "红方" style (:background "red")))
 
 (defconst regexp-cn "[^\x00-\xff]" "中文字符正则串")
 
@@ -47,10 +47,12 @@
       (match-beginning 0)
       (match-end 0)
       'font-lock-face
-      (if
-        (< (match-beginning 0) (/ chess-init-length 2))
-        '(:background "blue")
-        '(:background "red"))
+      (plist-get
+        (if
+          (< (match-beginning 0) (/ chess-init-length 2))
+            side-blue
+          side-red)
+        'style)
       chess-init)
     (setq start (match-end 0))))
 
