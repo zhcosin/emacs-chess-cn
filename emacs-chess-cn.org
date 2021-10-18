@@ -1,0 +1,54 @@
+
+#+HTML_HEAD:
+#+TITLE: 请输入文章标题
+#+AUTHOR: zhcosin
+#+DATE:
+#+OPTIONS:   ^:{} \n:t 
+#+LANGUAGE: zh-CN
+
+* 设计
+
+** 展示层
+
+功能
+ - 绘制/更新字符界面
+ - 棋盘坐标与字符坐标互相转换
+   
+** 内核层
+   
+** 走子/吃子规则
+
+每个兵种有其基本走法，即棋子本身的走法，无关棋局
+#+BEGIN_SRC elisp
+(defun move-rule-base (oldpos dstops)
+ t/nil)   
+#+END_SRC
+
+棋局走法即与棋局有关的走法限制，包括最基本的不能走到棋盘外，此外最重要的走法限制，如马绊腿、象填心、卒不能后退且过河后可以横走、车炮直线被挡不能跳跃移动之类，士象不能过河，士和将帅不能离开九宫格，将帅不可见面.
+#+BEGIN_SRC elisp
+(defun move-rule (oldpos dstops curt-situation)
+  (unless (move-rule-base oldpos dstops)
+    nil)
+ t/nil)
+#+END_SRC
+
+除炮外的所有兵种，其吃子规则与走子规则相同，移动目标位置上有对方棋子即可以吃子，只有炮例外.
+只能吃掉对方的棋子，不可吃掉己方棋子.
+#+BEGIN_SRC elisp
+(defun eat-rule (oldpos dstpos curt-situation)
+ t/nil)
+
+#+END_SRC
+
+通过移动时的目标位置上是否有对方棋子来判断是走子还是吃子. 吃子时，除炮外，先判断移动规则是否满足，炮单独判定，如果是走子，则判断移动规则.
+   
+** 兵种
+((name . (蓝方名称 红方名称)) (走子规则 . 规则函数)  (吃子规则 . 规则函数) (是否统帅 . t/nil))
+   
+** 棋子
+((兵种 . xx) (阵营 . xx))
+
+** 棋局
+棋子的二维矩阵
+( (棋子1 棋子2 ... 棋子9) ...)
+
