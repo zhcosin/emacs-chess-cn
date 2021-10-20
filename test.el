@@ -87,12 +87,15 @@
 
 ;;(get-text-property 0 'font-lock-face chess-init)
 
+(defconst chess-banner "\n\n        中国象棋        \n\n" "banner")
+
 (defun chess-new ()
   (interactive)
   (get-buffer-create chess-buffer-name)
   (switch-to-buffer chess-buffer-name)
   (erase-buffer)
   (font-lock-mode 1)
+  (insert chess-banner)
   (set-marker board-start (point)) ;; 棋盘开始位置标记
   (insert chess-init)
   (set-marker board-end (point)) ;; 棋盘结束位置标记
@@ -104,7 +107,7 @@
   ;;(princ (cons board-start board-end))
   ;;(princ (position-to-coordinate 148))
   ;;(princ (position-to-coordinate (coordinate-to-position '(4 5))))
-  ;;(princ (coordinate-to-position (position-to-coordinate 1051)))
+  (princ (coordinate-to-position (position-to-coordinate 1051)))
   )
 
 
