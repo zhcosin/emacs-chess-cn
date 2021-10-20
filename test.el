@@ -20,18 +20,20 @@
 (defvar chess-situation nil "棋局,10x9二维矩阵，元素为棋子")
 (defvar chess-init-situation
   '(
-   '(1 1 1 1 1 1 1 1 1)
-   '(nil nil nil nil nil nil nil nil nil)
-   '(nil 1 nil nil nil nil nil 1 nil)
-   '(1 nil 1 nil 1 nil 1 nil 1)
-   '(nil nil nil nil nil nil nil nil nil)
-   '(nil nil nil nil nil nil nil nil nil)
-   '(1 nil 1 nil 1 nil 1 nil 1)
-   '(nil 1 nil nil nil nil nil 1 nil)
-   '(nil nil nil nil nil nil nil nil nil)
-   '(1 1 1 1 1 1 1 1 1)
+   (1 1 1 1 1 1 1 1 1)
+   (nil nil nil nil nil nil nil nil nil)
+   (nil 1 nil nil nil nil nil 1 nil)
+   (1 nil 1 nil 1 nil 1 nil 1)
+   (nil nil nil nil nil nil nil nil nil)
+   (nil nil nil nil nil nil nil nil nil)
+   (1 nil 1 nil 1 nil 1 nil 1)
+   (nil 1 nil nil nil nil nil 1 nil)
+   (nil nil nil nil nil nil nil nil nil)
+   (1 1 1 1 1 1 1 1 1)
    )
   "初始棋局")
+(setq chess-situation chess-init-situation)
+
 
 (defvar chess-init "")
 
@@ -100,8 +102,9 @@
   ;;(princ-list (get-board-pos 0))
   ;;(princ board-end)
   ;;(princ (cons board-start board-end))
-  (princ (position-to-coordinate 148))
-  ;;(princ (coordinate-to-position '(0 1)))
+  ;;(princ (position-to-coordinate 148))
+  ;;(princ (position-to-coordinate (coordinate-to-position '(4 5))))
+  ;;(princ (coordinate-to-position (position-to-coordinate 1051)))
   )
 
 
@@ -121,7 +124,7 @@
              (when (char-equal (char-before) ?\n)
                (setq row (1+ row))
                (setq col 0)))
-           (cons (/ col grid-width) (/ row grid-high))))))
+           (list (/ col grid-width) (/ row grid-high))))))
 
 ;; 棋盘坐标转换为缓冲区位置
 (defun coordinate-to-position (cord)
@@ -129,38 +132,37 @@
        (<= (nth 0 cord) 8)
        (>= (nth 1 cord) 0)
        (<= (nth 1 cord) 9)
-       (let ((row 0) (col 0) (pos 0))
-         (let ((board-at-row nil))
+       (let ((row 0) (col 0) (pos board-start))
+         (let ((board-at-row (nth row chess-situation)))
            (while (< row (nth 1 cord))
              (setq board-at-row (nth row chess-situation))
              (while (< col 9)
                ;; 若 (col . row) 处有棋子，则增加 grid-width - 1 个位置，否则 增加 grid-width 个位置
-               ;;(princ (nth col board-at-row))
-               (message (format "add %d" (if (null (nth col board-at-row)) grid-width (1- grid-width))))
-               (setq pos (+ pos (if (null (nth col board-at-row)) grid-width (1- grid-width))))
+               (setq pos (+ pos (if (null (nth col board-at-row)) (if (= col 8) 2 grid-width) (if (= col 8) 1 (1- grid-width)))))
                (setq col (1+ col)))  
              (setq pos (1+ pos))  ;; 换行符占据一个位置
-             (message (format "row=%d, pos=%d 字符行前" row pos))
              (setq pos (+ pos (* (1- grid-high) (+ 3 (* grid-width 8))))) ;; 棋盘方格高度产生的纯字符行，加上末尾的棋子位置(2个字符)和1个换行符.
-             (message (format "pos=%d" pos))
-             (setq row (1+ row)))
+             (setq row (1+ row))
+             (setq col 0))
+           (setq board-at-row (nth row chess-situation))
            (while (< col (nth 0 cord))
                ;; 若 (col . row) 处有棋子，则增加 grid-width - 1 个位置，否则 增加 grid-width 个位置
-               ;;(princ (nth col board-at-row))
-               (setq pos (+ pos (if (null (nth col board-at-row)) grid-width (1- grid-width))))
+               (setq pos (+ pos (if (null (nth col board-at-row)) (if (= col 8) 2 grid-width) (if (= col 8) 1 (1- grid-width)))))
                (setq col (1+ col)))
            )
          pos)))
 
-(coordinate-to-position '(0 2))
-(position-to-coordinate 148)
-(nth 2 chess-situation)
+(coordinate-to-position '(8 9))
+(position-to-coordinate 1395)
+(nth 0 chess-situation)
+(nth 7 (nth 0 chess-situation))
 
 (chess-new)
 
 (setq chess-init-str-arr (split-string chess-init "\n"))
 (setq chess-init-str-arr-len (mapcar 'length chess-init-str-arr))
 (message chess-init-str-arr-len)
+(length chess-init)
 
 
 
