@@ -29,10 +29,46 @@
 
 (defconst grid-width 6 "棋盘小方格宽度字符数")
 (defconst grid-high 3 "棋盘小方格高度字符数")
+(defconst grid-offset 8 "棋盘距左边界起始列号")
 
 
 
 (defvar chess-init "")
+
+
+(defconst chess-board 
+"+-----+-----+-----+-----+-----+-----+-----+-----+ 
+|     |     |     | \\   |   / |     |     |     | 
+|     |     |     |   \\ | /   |     |     |     | 
++-----+-----+-----+-----+-----+-----+-----+-----+ 
+|     |     |     |   / | \\   |     |     |     | 
+|     |     |     | /   |   \\ |     |     |     | 
++-----+-----+-----+-----+-----+-----+-----+-----+ 
+|     |     |     |     |     |     |     |     | 
+|     |     |     |     |     |     |     |     | 
++-----+-----+-----+-----+-----+-----+-----+-----+ 
+|     |     |     |     |     |     |     |     | 
+|     |     |     |     |     |     |     |     | 
++-----+-----+-----+-----+-----+-----+-----+-----+ 
+|                                               | 
+|                                               | 
++-----+-----+-----+-----+-----+-----+-----+-----+ 
+|     |     |     |     |     |     |     |     | 
+|     |     |     |     |     |     |     |     | 
++-----+-----+-----+-----+-----+-----+-----+-----+ 
+|     |     |     |     |     |     |     |     | 
+|     |     |     |     |     |     |     |     | 
++-----+-----+-----+-----+-----+-----+-----+-----+ 
+|     |     |     | \\   |   / |     |     |     | 
+|     |     |     |   \\ | /   |     |     |     | 
++-----+-----+-----+-----+-----+-----+-----+-----+ 
+|     |     |     |   / | \\   |     |     |     | 
+|     |     |     | /   |   \\ |     |     |     | 
++-----+-----+-----+-----+-----+-----+-----+-----+ 
+"
+"棋盘")
+
+
 
 (setq chess-init 
 "車----馬----象----士----將----士----象----馬----車
@@ -75,15 +111,6 @@
 (defconst chess-piece-type-xiang '(name (side-blue "象" side-red "相") move-rule nil kill-rule nil is-king nil) "")
 (defconst chess-piece-type-shi '(name (side-blue "士" side-red "仕") move-rule nil kill-rule nil is-king nil) "")
 (defconst chess-piece-type-jiangshuai '(name (side-blue "將" side-red "帥") move-rule nil kill-rule nil is-king t) "")
-;;(defconst chess-piece-type-list
-  ;;(list "ju" chess-piece-type-ju
-        ;;"ma" chess-piece-type-ma
-        ;;"pao" chess-piece-type-pao
-        ;;"bingzu" chess-piece-type-binzu
-        ;;"xiang" chess-piece-type-xiang
-        ;;"shi" chess-piece-type-shi
-        ;;"jiangshuai" chess-piece-type-jiangshuai)
-  ;;"兵种列表")
 
 ;; 蓝方棋子
 (defvar chess-piece-blue-jiang '(side side-blue type chess-piece-type-jiangshuai) "蓝将")
@@ -157,11 +184,12 @@
   )
 
 
-(defun draw-chess-board (the-situation)
+(defun draw-chess-situation (the-situation)
   "绘制棋局"
   (delete-region board-start (1- board-end))
   (goto-char board-start)
   (while the-situation
+    (insert (make-string grid-offset ? ))
     (let ((row-situation (car the-situation)))
       (while row-situation
         (let* ((curt-piece (car row-situation))
@@ -189,8 +217,40 @@
       (insert ;; 棋局换行
        (scale-string
         (concat
-          (scale-string (concat "|" (make-string (1- grid-width) ? )) 8) "| \n") (1- grid-high))))
+          (make-string grid-offset ? )
+          (scale-string (concat "|" (make-string (1- grid-width) ? )) 8)
+          "| \n")
+        (1- grid-high))))
     (setq the-situation (cdr the-situation)))) ;; 切换棋局下一行
+
+(defun put-chess-piece-to-board (row-situation board-row-str)
+  "将棋局的一行输出到棋盘上的一行上"
+  (let* ((board-row-str-len (length board-row-str))
+             (max-width (if (< grid-width board-row-str-len) grid-width board-row-str-len)))
+    (if row-situation
+        (concat
+         (if
+           (car row-situation) ;; 有棋子
+           (concat
+             (propertize (get-chess-piece-name (car row-situation)) 'font-lock-face (get-chess-piece-face (car row-situation)))
+             (substring board-row-str 2 max-width))
+           (substring board-row-str 0 max-width))
+         (put-chess-piece-to-board (cdr row-situation) (substring board-row-str max-width)))
+      board-row-str)))
+
+(defun draw-chess-board-by-situation (the-situation)
+  "将棋局输出到棋盘"
+  (delete-region board-start (1- board-end))
+  (goto-char board-start)
+  (let ((i 0)
+        (board-arr (split-string chess-board "\n")))
+    (while (< i (length board-arr))
+      (insert (concat (make-string grid-offset ? )
+                      (if (= 0 (% i 3))
+          (put-chess-piece-to-board (nth (/ i 3) the-situation) (nth i board-arr))
+        (nth i board-arr)) "\n"))
+      (setq i (1+ i)))))
+
 
 (defconst chess-banner "\n\n        中国象棋        \n\n" "banner")
 
@@ -200,12 +260,13 @@
   (switch-to-buffer chess-buffer-name)
   (erase-buffer)
   (font-lock-mode 1)
-  ;;(insert chess-banner)
+  (insert chess-banner)
   (set-marker board-start (point)) ;; 棋盘开始位置标记
   ;;(insert chess-init)
   (insert "\n")
   (set-marker board-end (point)) ;; 棋盘结束位置标记
-  (draw-chess-board chess-init-situation)
+  ;;(draw-chess-board chess-init-situation)
+  (draw-chess-board-by-situation chess-init-situation)
   ;;(princ board-start)
   ;;(princ board-end)
   ;;(setq chess-situation chess-init-situation)
