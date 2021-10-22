@@ -1,38 +1,35 @@
 ;; 启用 font-lock 时设置文本外观应使用 font-lock-face 文本属性，未启用 font-lock 时应使用 face 属性.
 
+(defun scale-string (str num)
+  "反复拼接同一字符串若干次"
+  (cond
+   ((= num 1)
+      str)
+   ((> num 1)
+    (concat str (scale-string str (1- num))))
+   (t nil)))
+
+
 ;; 缓冲区名称
 (defconst chess-buffer-name "*chess*")
 
 ;; 棋盘起止位置标记
-(setq board-start (make-marker)) 
-(setq board-end (make-marker)) 
+(defvar board-start (make-marker)) 
+(defvar board-end (make-marker)) 
 
 ;; 对战双方
 (defconst side-blue '(name "蓝方" style (:background "blue")))
 (defconst side-red '(name "红方" style (:background "red")))
+(defun get-side-by-flag (flag)
+  "根据对局方标识获取对局方信息"
+  (symbol-value flag))
+
 
 (defconst regexp-cn "[^\x00-\xff]" "中文字符正则串")
 
 (defconst grid-width 6 "棋盘小方格宽度字符数")
 (defconst grid-high 3 "棋盘小方格高度字符数")
 
-
-(defvar chess-situation nil "棋局,10x9二维矩阵，元素为棋子")
-(defvar chess-init-situation
-  '(
-   (1 1 1 1 1 1 1 1 1)
-   (nil nil nil nil nil nil nil nil nil)
-   (nil 1 nil nil nil nil nil 1 nil)
-   (1 nil 1 nil 1 nil 1 nil 1)
-   (nil nil nil nil nil nil nil nil nil)
-   (nil nil nil nil nil nil nil nil nil)
-   (1 nil 1 nil 1 nil 1 nil 1)
-   (nil 1 nil nil nil nil nil 1 nil)
-   (nil nil nil nil nil nil nil nil nil)
-   (1 1 1 1 1 1 1 1 1)
-   )
-  "初始棋局")
-(setq chess-situation chess-init-situation)
 
 
 (defvar chess-init "")
@@ -65,27 +62,135 @@
 +-----+-----+-----+-----+-----+-----+-----+-----+ 
 |     |     |     |   / | \\   |     |     |     | 
 |     |     |     | /   |   \\ |     |     |     | 
-車----馬----相----仕----帅----仕----相----馬----車")
+車----馬----相----仕----帥----仕----相----馬----車")
 
 (defconst chess-init-length (length chess-init))
 
-(let ((start 0))
-  (while (string-match regexp-cn chess-init start)  ;; 匹配中文
-    ;;(princ (match-data))
-    (put-text-property   ;; 添加队伍属性
-      (match-beginning 0)
-      (match-end 0)
-      'font-lock-face
-      (plist-get
-        (if
-          (< (match-beginning 0) (/ chess-init-length 2))
-            side-blue
-          side-red)
-        'style)
-      chess-init)
-    (setq start (match-end 0))))
 
-;;(get-text-property 0 'font-lock-face chess-init)
+;; 兵种
+(defconst chess-piece-type-ju '(name (side-blue "車" side-red "車") move-rule nil kill-rule nil is-king nil) "")
+(defconst chess-piece-type-ma '(name (side-blue "馬" side-red "馬") move-rule nil kill-rule nil is-king nil) "")
+(defconst chess-piece-type-pao '(name (side-blue "砲" side-red "炮") move-rule nil kill-rule nil is-king nil) "")
+(defconst chess-piece-type-bingzu '(name (side-blue "卒" side-red "兵") move-rule nil kill-rule nil is-king nil) "")
+(defconst chess-piece-type-xiang '(name (side-blue "象" side-red "相") move-rule nil kill-rule nil is-king nil) "")
+(defconst chess-piece-type-shi '(name (side-blue "士" side-red "仕") move-rule nil kill-rule nil is-king nil) "")
+(defconst chess-piece-type-jiangshuai '(name (side-blue "將" side-red "帥") move-rule nil kill-rule nil is-king t) "")
+;;(defconst chess-piece-type-list
+  ;;(list "ju" chess-piece-type-ju
+        ;;"ma" chess-piece-type-ma
+        ;;"pao" chess-piece-type-pao
+        ;;"bingzu" chess-piece-type-binzu
+        ;;"xiang" chess-piece-type-xiang
+        ;;"shi" chess-piece-type-shi
+        ;;"jiangshuai" chess-piece-type-jiangshuai)
+  ;;"兵种列表")
+
+;; 蓝方棋子
+(defvar chess-piece-blue-jiang '(side side-blue type chess-piece-type-jiangshuai) "蓝将")
+(defvar chess-piece-blue-xiang-1 '(side side-blue type chess-piece-type-xiang) "蓝象1")
+(defvar chess-piece-blue-xiang-2 '(side side-blue type chess-piece-type-xiang) "蓝象2")
+(defvar chess-piece-blue-shi-1 '(side side-blue type chess-piece-type-shi) "蓝士1")
+(defvar chess-piece-blue-shi-2 '(side side-blue type chess-piece-type-shi) "蓝士2")
+(defvar chess-piece-blue-ju-1 '(side side-blue type chess-piece-type-ju) "蓝车1")
+(defvar chess-piece-blue-ju-2 '(side side-blue type chess-piece-type-ju) "蓝车2")
+(defvar chess-piece-blue-ma-1 '(side side-blue type chess-piece-type-ma) "蓝马1")
+(defvar chess-piece-blue-ma-2 '(side side-blue type chess-piece-type-ma) "蓝马2")
+(defvar chess-piece-blue-pao-1 '(side side-blue type chess-piece-type-pao) "蓝炮1")
+(defvar chess-piece-blue-pao-2 '(side side-blue type chess-piece-type-pao) "蓝炮2")
+(defvar chess-piece-blue-zu-1 '(side side-blue type chess-piece-type-bingzu) "蓝卒1")
+(defvar chess-piece-blue-zu-2 '(side side-blue type chess-piece-type-bingzu) "蓝卒2")
+(defvar chess-piece-blue-zu-3 '(side side-blue type chess-piece-type-bingzu) "蓝卒3")
+(defvar chess-piece-blue-zu-4 '(side side-blue type chess-piece-type-bingzu) "蓝卒4")
+(defvar chess-piece-blue-zu-5 '(side side-blue type chess-piece-type-bingzu) "蓝卒5")
+
+;; 红方棋子
+(defvar chess-piece-red-shuai '(side side-red type chess-piece-type-jiangshuai) "红将")
+(defvar chess-piece-red-xiang-1 '(side side-red type chess-piece-type-xiang) "红象1")
+(defvar chess-piece-red-xiang-2 '(side side-red type chess-piece-type-xiang) "红象2")
+(defvar chess-piece-red-shi-1 '(side side-red type chess-piece-type-shi) "红士1")
+(defvar chess-piece-red-shi-2 '(side side-red type chess-piece-type-shi) "红士2")
+(defvar chess-piece-red-ju-1 '(side side-red type chess-piece-type-ju) "红车1")
+(defvar chess-piece-red-ju-2 '(side side-red type chess-piece-type-ju) "红车2")
+(defvar chess-piece-red-ma-1 '(side side-red type chess-piece-type-ma) "红马1")
+(defvar chess-piece-red-ma-2 '(side side-red type chess-piece-type-ma) "红马2")
+(defvar chess-piece-red-pao-1 '(side side-red type chess-piece-type-pao) "红炮1")
+(defvar chess-piece-red-pao-2 '(side side-red type chess-piece-type-pao) "红炮2")
+(defvar chess-piece-red-bing-1 '(side side-red type chess-piece-type-bingzu) "红卒1")
+(defvar chess-piece-red-bing-2 '(side side-red type chess-piece-type-bingzu) "红卒2")
+(defvar chess-piece-red-bing-3 '(side side-red type chess-piece-type-bingzu) "红卒3")
+(defvar chess-piece-red-bing-4 '(side side-red type chess-piece-type-bingzu) "红卒4")
+(defvar chess-piece-red-bing-5 '(side side-red type chess-piece-type-bingzu) "红卒5")
+
+
+
+;; 棋局
+(defvar chess-situation nil "棋局,10x9二维矩阵，元素为棋子")
+(defvar chess-init-situation
+  (list
+   (list chess-piece-blue-ju-1 chess-piece-blue-ma-1 chess-piece-blue-xiang-1 chess-piece-blue-shi-1 chess-piece-blue-jiang chess-piece-blue-shi-2 chess-piece-blue-xiang-2 chess-piece-blue-ma-2 chess-piece-blue-ju-2)
+   (list nil nil nil nil nil nil nil nil nil)
+   (list nil chess-piece-blue-pao-1 nil nil nil nil nil chess-piece-blue-pao-2 nil)
+   (list chess-piece-blue-zu-1 nil chess-piece-blue-zu-2 nil chess-piece-blue-zu-3 nil chess-piece-blue-zu-4 nil chess-piece-blue-zu-5)
+   (list nil nil nil nil nil nil nil nil nil)
+   (list nil nil nil nil nil nil nil nil nil)
+   (list chess-piece-red-bing-1 nil chess-piece-red-bing-2 nil chess-piece-red-bing-3 nil chess-piece-red-bing-4 nil chess-piece-red-bing-5)
+   (list nil chess-piece-red-pao-1 nil nil nil nil nil chess-piece-red-pao-2 nil)
+   (list nil nil nil nil nil nil nil nil nil)
+   (list chess-piece-red-ju-1 chess-piece-red-ma-1 chess-piece-red-xiang-1 chess-piece-red-shi-1 chess-piece-red-shuai chess-piece-red-shi-2 chess-piece-red-xiang-2 chess-piece-red-ma-2 chess-piece-red-ju-2)
+   )
+  "初始棋局")
+(setq chess-situation chess-init-situation)
+
+(defun get-side-of-chess-piece (chess-piece)
+  "获取棋子的对战方信息"
+  (get-side-by-flag (plist-get chess-piece 'side)))
+
+(defun get-chess-piece-name (chess-piece)
+  "获取棋子名称"
+  (plist-get (plist-get (symbol-value (plist-get chess-piece 'type)) 'name) (plist-get chess-piece 'side)))
+
+
+
+(defun get-chess-piece-face (chess-piece)
+  "获取棋子用于显示的文本属性"
+  (plist-get (symbol-value (plist-get chess-piece 'side)) 'style)
+  )
+
+
+(defun draw-chess-board (the-situation)
+  "绘制棋局"
+  (delete-region board-start (1- board-end))
+  (goto-char board-start)
+  (while the-situation
+    (let ((row-situation (car the-situation)))
+      (while row-situation
+        (let* ((curt-piece (car row-situation))
+              (with-piece (not (null curt-piece)))
+              (is-tail (null (cdr row-situation)))
+              )
+          (insert
+           (cond
+            ((and with-piece (not is-tail)) ;; 当前位置有棋子且不在行尾
+             ;;(message "有，no")
+             (concat (propertize (get-chess-piece-name curt-piece) 'font-lock-face (get-chess-piece-face curt-piece))
+                     (make-string (- grid-width 2) ?-)))
+            ((and with-piece is-tail) ;; 当前位置有棋子且在行尾
+             ;;(message "有，yes")
+             (concat (propertize (get-chess-piece-name curt-piece) 'font-lock-face (get-chess-piece-face curt-piece)) "\n"))
+            ((and (not with-piece) (not is-tail)) ;; 当前位置无棋子且不在行尾
+             ;;(message "无，no")
+             (concat "+" (make-string (1- grid-width) ?-)))
+            ((and (not with-piece) is-tail) ;; 当前位置无棋子且在行尾
+             ;;(message "无，yes")
+             "+ \n"))))
+        (setq row-situation (cdr row-situation)) ;; 切换下一个棋子
+        ))
+    (when (cdr the-situation) ;; 棋局还有下一行，则插入中间文本行
+      (insert ;; 棋局换行
+       (scale-string
+        (concat
+          (scale-string (concat "|" (make-string (1- grid-width) ? )) 8) "| \n") (1- grid-high))))
+    (setq the-situation (cdr the-situation)))) ;; 切换棋局下一行
 
 (defconst chess-banner "\n\n        中国象棋        \n\n" "banner")
 
@@ -95,19 +200,29 @@
   (switch-to-buffer chess-buffer-name)
   (erase-buffer)
   (font-lock-mode 1)
-  (insert chess-banner)
+  ;;(insert chess-banner)
   (set-marker board-start (point)) ;; 棋盘开始位置标记
-  (insert chess-init)
-  (set-marker board-end (point)) ;; 棋盘结束位置标记
+  ;;(insert chess-init)
   (insert "\n")
-  (setq chess-situation chess-init-situation)
+  (set-marker board-end (point)) ;; 棋盘结束位置标记
+  (draw-chess-board chess-init-situation)
+  ;;(princ board-start)
+  ;;(princ board-end)
+  ;;(setq chess-situation chess-init-situation)
   ;;(message (format "board start at %d and end at %d" (marker-position board-start) (marker-position board-end)))
   ;;(princ-list (get-board-pos 0))
   ;;(princ board-end)
   ;;(princ (cons board-start board-end))
   ;;(princ (position-to-coordinate 148))
   ;;(princ (position-to-coordinate (coordinate-to-position '(4 5))))
-  (princ (coordinate-to-position (position-to-coordinate 1051)))
+  ;;(princ (coordinate-to-position (position-to-coordinate (+ 1051 board-start))))
+  ;;(princ board-start)
+  ;;(message "board start at %d, end at %d" (marker-position board-start) (marker-position board-end))
+  ;;(delete-region board-start (1- board-end))
+  ;;(goto-char board-start)
+  ;;(insert "abcdefg")
+  ;;(princ board-start)
+  ;;(princ board-end)
   )
 
 
