@@ -284,6 +284,7 @@
   ;;(insert "abcdefg")
   ;;(princ board-start)
   ;;(princ board-end)
+  (princ (position-to-coordinate 1257))
   )
 
 
@@ -295,12 +296,14 @@
          (let ((row 0)
                (col 0))
            (goto-char board-start)
+           (forward-char grid-offset)
            (while (< (point) pos)
              (forward-char)
              (setq col (1+ col))
              (unless (and (> (char-after) ?\x00) (< (char-after) ?\xff)) ;; 一个中文字符占据两个英文字符的位置
                (setq col (1+ col)))
              (when (char-equal (char-before) ?\n)
+               (forward-char grid-offset)
                (setq row (1+ row))
                (setq col 0)))
            (list (/ col grid-width) (/ row grid-high))))))
