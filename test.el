@@ -338,11 +338,12 @@
 
 (define-derived-mode chinese-chess-mode special-mode "Chinese-Chess"
   "中国象棋主模式"
-  (define-key chinese-chess-mode-map (kbd "SPC")
-    (lambda () (interactive) (message "按下了空格键")))
+  ;;(define-key chinese-chess-mode-map (kbd "SPC")
+    ;;(lambda () (interactive) (message "按下了空格键")))
   )
 
-(add-to-list 'evil-emacs-state-modes 'chinese-chess-mode)
+;;(add-to-list 'evil-emacs-state-modes 'chinese-chess-mode)
+(evil-define-key 'normal chinese-chess-mode-map (kbd "RET") (lambda () (interactive) (message "按下了空格键")))
 ;;(add-hook 'chinese-chess-mode-hook (lambda () (progn (evil-mode -1) (global-hl-line-mode -1)))
 
 (coordinate-to-position '(8 9))
