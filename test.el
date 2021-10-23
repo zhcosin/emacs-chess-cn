@@ -252,7 +252,7 @@
       (setq i (1+ i)))))
 
 
-(defconst chess-banner "\n\n        中国象棋        \n\n" "banner")
+(defconst chess-banner "\n\n                             中国象棋        \n\n\n" "banner")
 
 (defun chess-new ()
   (interactive)
@@ -267,6 +267,7 @@
   (set-marker board-end (point)) ;; 棋盘结束位置标记
   ;;(draw-chess-board chess-init-situation)
   (draw-chess-board-by-situation chess-init-situation)
+  (setq buffer-read-only t)
   ;;(princ board-start)
   ;;(princ board-end)
   ;;(setq chess-situation chess-init-situation)
@@ -284,7 +285,8 @@
   ;;(insert "abcdefg")
   ;;(princ board-start)
   ;;(princ board-end)
-  (princ (position-to-coordinate 1257))
+  ;;(princ (position-to-coordinate 1645))
+  (chinese-chess-mode)
   )
 
 
@@ -333,6 +335,15 @@
                (setq col (1+ col)))
            )
          pos)))
+
+(define-derived-mode chinese-chess-mode special-mode "Chinese-Chess"
+  "中国象棋主模式"
+  (define-key chinese-chess-mode-map (kbd "SPC")
+    (lambda () (interactive) (message "按下了空格键")))
+  )
+
+(add-to-list 'evil-emacs-state-modes 'chinese-chess-mode)
+;;(add-hook 'chinese-chess-mode-hook (lambda () (progn (evil-mode -1) (global-hl-line-mode -1)))
 
 (coordinate-to-position '(8 9))
 (position-to-coordinate 1395)
