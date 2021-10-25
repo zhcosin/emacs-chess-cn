@@ -17,7 +17,7 @@
 (defvar board-start (make-marker)) 
 (defvar board-end (make-marker)) 
 
-;; 对战双方
+;; 对弈双方
 (defconst side-blue '(name "蓝方" style (:background "blue")))
 (defconst side-red '(name "红方" style (:background "red")))
 (defun get-side-by-flag (flag)
@@ -150,10 +150,12 @@
 
 
 
+(defvar chess-curt-selected-cord nil "当前所选择的棋子坐标")
+(defvar chess-curt-side nil "当前走子对弈方")
 ;; 棋局
 (defvar chess-situation nil "棋局,10x9二维矩阵，元素为棋子")
 (defvar chess-init-situation
-  (list
+  (list 
    (list chess-piece-blue-ju-1 chess-piece-blue-ma-1 chess-piece-blue-xiang-1 chess-piece-blue-shi-1 chess-piece-blue-jiang chess-piece-blue-shi-2 chess-piece-blue-xiang-2 chess-piece-blue-ma-2 chess-piece-blue-ju-2)
    (list nil nil nil nil nil nil nil nil nil)
    (list nil chess-piece-blue-pao-1 nil nil nil nil nil chess-piece-blue-pao-2 nil)
@@ -166,10 +168,11 @@
    (list chess-piece-red-ju-1 chess-piece-red-ma-1 chess-piece-red-xiang-1 chess-piece-red-shi-1 chess-piece-red-shuai chess-piece-red-shi-2 chess-piece-red-xiang-2 chess-piece-red-ma-2 chess-piece-red-ju-2)
    )
   "初始棋局")
+
 (setq chess-situation chess-init-situation)
 
 (defun get-side-of-chess-piece (chess-piece)
-  "获取棋子的对战方信息"
+  "获取棋子的对弈方信息"
   (get-side-by-flag (plist-get chess-piece 'side)))
 
 (defun get-chess-piece-name (chess-piece)
@@ -186,6 +189,7 @@
 
 (defun draw-chess-situation (the-situation)
   "绘制棋局"
+  (setq buffer-read-only nil)
   (delete-region board-start (1- board-end))
   (goto-char board-start)
   (while the-situation
@@ -221,7 +225,8 @@
           (scale-string (concat "|" (make-string (1- grid-width) ? )) 8)
           "| \n")
         (1- grid-high))))
-    (setq the-situation (cdr the-situation)))) ;; 切换棋局下一行
+    (setq the-situation (cdr the-situation)))
+  (setq buffer-read-only t)) ;; 切换棋局下一行
 
 (defun put-chess-piece-to-board (row-situation board-row-str)
   "将棋局的一行输出到棋盘上的一行上"
@@ -240,6 +245,7 @@
 
 (defun draw-chess-board-by-situation (the-situation)
   "将棋局输出到棋盘"
+  (setq buffer-read-only nil)
   (delete-region board-start (1- board-end))
   (goto-char board-start)
   (let ((i 0)
@@ -249,13 +255,15 @@
                       (if (= 0 (% i 3))
           (put-chess-piece-to-board (nth (/ i 3) the-situation) (nth i board-arr))
         (nth i board-arr)) "\n"))
-      (setq i (1+ i)))))
+      (setq i (1+ i))))
+  (setq buffer-read-only t))
 
 
 (defconst chess-banner "\n\n                             中国象棋        \n\n\n" "banner")
 
 (defun chess-new ()
   (interactive)
+  (setq chess-situation chess-init-situation) ;; 初始棋局
   (get-buffer-create chess-buffer-name)
   (switch-to-buffer chess-buffer-name)
   (erase-buffer)
@@ -285,7 +293,7 @@
   ;;(insert "abcdefg")
   ;;(princ board-start)
   ;;(princ board-end)
-  ;;(princ (position-to-coordinate 1645))
+  (princ (position-to-coordinate 1655))
   (chinese-chess-mode)
   )
 
@@ -308,7 +316,7 @@
                (forward-char grid-offset)
                (setq row (1+ row))
                (setq col 0)))
-           (list (/ col grid-width) (/ row grid-high))))))
+           (cons (/ col grid-width) (/ row grid-high))))))
 
 ;; 棋盘坐标转换为缓冲区位置
 (defun coordinate-to-position (cord)
@@ -342,9 +350,77 @@
     ;;(lambda () (interactive) (message "按下了空格键")))
   )
 
+(defun chess-get-piece-from-situation (cord)
+  "根据坐标获取棋局上的棋子"
+  (nth (car cord) (nth (cdr cord) chess-situation)))
+
+(defun chess-set-piece-to-situation (cord piece)
+  "根据坐标设置棋子"
+  (setf (nth (car cord) (nth (cdr cord) chess-situation)) piece))
+
+(chess-get-piece-from-situation '(0 . 0))
+
+
+(defun chess-get-other-side (side)
+  "获取对弈对方"
+  (if (eq side 'side-blue) 'side-red 'side-blue))
+
+(defun chess-select-piece (cord)
+  "选择棋子, 更新当前所选棋子，并将允许走子方设为所选棋子所属方(以应对棋局首步棋)"
+  (setq chess-curt-selected-cord cord)
+  (setq chess-curt-side (plist-get (chess-get-piece-from-situation cord) 'side))
+  (chess-step-debug)
+  )
+
+(defun chess-move-piece (cord)
+  "移动棋子，重置当前所选棋子，并将允许走子方设为另一方"
+  (chess-set-piece-to-situation cord (chess-get-piece-from-situation chess-curt-selected-cord))
+  (chess-set-piece-to-situation chess-curt-selected-cord nil)
+  (setq chess-curt-selected-cord nil)
+  (setq chess-curt-side (chess-get-other-side chess-curt-side))
+  (draw-chess-board-by-situation chess-situation) ;; 重新绘制棋盘
+  (chess-step-debug)
+  )
+
+(defun chess-kill-piece (cord)
+  "吃子，重置当前所选棋子，并将允许走子方设为另一方"
+  (setq chess-curt-selected-cord nil)
+  (setq chess-curt-side (chess-get-other-side chess-curt-side))
+  (draw-chess-board-by-situation chess-situation) ;; 重新绘制棋盘
+  (chess-step-debug)
+  )
+
+(defun chess-allow-side-p (side)
+  "是否为允许走子方"
+  (or (null chess-curt-side) (eq chess-curt-side side)))
+
+(defun chess-step ()
+  "走子棋步"
+  (interactive)
+  (let ((cord (position-to-coordinate (point))))
+    (if cord
+        ;;(message (format "落子位置 (%d, %d)" (car cord) (cdr cord)))
+        (let ((piece-at-point (chess-get-piece-from-situation cord)))
+          (if chess-curt-selected-cord  ;; 当前选子非空
+              (if piece-at-point ;; 光标处有棋子
+                  (if (chess-allow-side-p (plist-get piece-at-point 'side)) (chess-select-piece cord) (chess-kill-piece cord))
+                (chess-move-piece cord))
+            (if piece-at-point
+                (if (chess-allow-side-p (plist-get piece-at-point 'side)) (chess-select-piece cord) (message "无效棋步,当前应对方走子."))
+              (message "无效棋步，当前未选择棋子且目标位置处无棋子."))
+            ))
+      (message "落子位置无效"))
+    )
+  )
+
 ;;(add-to-list 'evil-emacs-state-modes 'chinese-chess-mode)
-(evil-define-key 'normal chinese-chess-mode-map (kbd "RET") (lambda () (interactive) (message "按下了空格键")))
+(evil-define-key 'normal chinese-chess-mode-map (kbd "RET") 'chess-step)
 ;;(add-hook 'chinese-chess-mode-hook (lambda () (progn (evil-mode -1) (global-hl-line-mode -1)))
+
+(defun chess-step-debug ()
+  "棋步调试"
+  (interactive)
+  (message (format "当前走子方: %s, 当前选子: %s" chess-curt-side chess-curt-selected-cord)))
 
 (coordinate-to-position '(8 9))
 (position-to-coordinate 1395)
