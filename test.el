@@ -154,7 +154,7 @@
 (defvar chess-curt-side nil "当前走子对弈方")
 ;; 棋局
 (defvar chess-situation nil "棋局,10x9二维矩阵，元素为棋子")
-(defvar chess-init-situation
+(defconst chess-init-situation
   (list 
    (list chess-piece-blue-ju-1 chess-piece-blue-ma-1 chess-piece-blue-xiang-1 chess-piece-blue-shi-1 chess-piece-blue-jiang chess-piece-blue-shi-2 chess-piece-blue-xiang-2 chess-piece-blue-ma-2 chess-piece-blue-ju-2)
    (list nil nil nil nil nil nil nil nil nil)
@@ -169,7 +169,6 @@
    )
   "初始棋局")
 
-(setq chess-situation chess-init-situation)
 
 (defun get-side-of-chess-piece (chess-piece)
   "获取棋子的对弈方信息"
@@ -261,11 +260,20 @@
 
 (defconst chess-banner "\n\n                             中国象棋        \n\n\n" "banner")
 
+(defun chess-copy-init-situation (chess-init-situation)
+  "深拷贝初始棋局"
+  (if chess-init-situation
+      (cons (copy-list (car chess-init-situation)) (chess-copy-init-situation (cdr chess-init-situation)))
+    nil)
+  )
+
+
 (defun chess-new ()
   (interactive)
-  (setq chess-situation chess-init-situation) ;; 初始棋局
   (get-buffer-create chess-buffer-name)
   (switch-to-buffer chess-buffer-name)
+  (chinese-chess-mode)
+  (setq buffer-read-only nil)
   (erase-buffer)
   (font-lock-mode 1)
   (insert chess-banner)
@@ -274,8 +282,12 @@
   (insert "\n")
   (set-marker board-end (point)) ;; 棋盘结束位置标记
   ;;(draw-chess-board chess-init-situation)
-  (draw-chess-board-by-situation chess-init-situation)
-  (setq buffer-read-only t)
+  (setq chess-situation (chess-copy-init-situation chess-init-situation)) ;; 初始棋局
+  (setq chess-curt-side nil)
+  (setq chess-curt-selected-cord nil)
+
+  (draw-chess-board-by-situation chess-situation)
+  ;;(setq buffer-read-only t)
   ;;(princ board-start)
   ;;(princ board-end)
   ;;(setq chess-situation chess-init-situation)
@@ -293,8 +305,7 @@
   ;;(insert "abcdefg")
   ;;(princ board-start)
   ;;(princ board-end)
-  (princ (position-to-coordinate 1655))
-  (chinese-chess-mode)
+  ;;(princ (position-to-coordinate 1655))
   )
 
 
@@ -345,6 +356,10 @@
          pos)))
 
 (define-derived-mode chinese-chess-mode special-mode "Chinese-Chess"
+  (make-local-variable 'chess-situation)
+  (make-local-variable 'chess-curt-selected-cord)
+  (make-local-variable 'chess-curt-side)
+
   "中国象棋主模式"
   ;;(define-key chinese-chess-mode-map (kbd "SPC")
     ;;(lambda () (interactive) (message "按下了空格键")))
@@ -421,19 +436,3 @@
   "棋步调试"
   (interactive)
   (message (format "当前走子方: %s, 当前选子: %s" chess-curt-side chess-curt-selected-cord)))
-
-(coordinate-to-position '(8 9))
-(position-to-coordinate 1395)
-(nth 0 chess-situation)
-(nth 7 (nth 0 chess-situation))
-
-(chess-new)
-
-(setq chess-init-str-arr (split-string chess-init "\n"))
-(setq chess-init-str-arr-len (mapcar 'length chess-init-str-arr))
-(message chess-init-str-arr-len)
-(length chess-init)
-
-
-
-;;(insert chess-init)
