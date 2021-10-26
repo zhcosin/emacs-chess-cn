@@ -356,11 +356,10 @@
          pos)))
 
 (define-derived-mode chinese-chess-mode special-mode "Chinese-Chess"
+  "中国象棋主模式"
   (make-local-variable 'chess-situation)
   (make-local-variable 'chess-curt-selected-cord)
   (make-local-variable 'chess-curt-side)
-
-  "中国象棋主模式"
   ;;(define-key chinese-chess-mode-map (kbd "SPC")
     ;;(lambda () (interactive) (message "按下了空格键")))
   )
