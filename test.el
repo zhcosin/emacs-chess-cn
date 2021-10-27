@@ -389,20 +389,20 @@
   (chess-step-debug)
   )
 
-(defun chess-move-piece (cord)
+(defun chess-move-piece (oldcord dstcord)
   "移动棋子"
-  (chess-set-piece-to-situation cord (chess-get-piece-from-situation chess-curt-selected-cord))
-  (chess-set-piece-to-situation chess-curt-selected-cord nil)
+  (chess-set-piece-to-situation dstcord (chess-get-piece-from-situation oldcord))
+  (chess-set-piece-to-situation oldcord nil)
   (setq chess-curt-selected-cord nil)
   (setq chess-curt-side (chess-get-other-side chess-curt-side))
   (draw-chess-board-by-situation chess-situation) ;; 重新绘制棋盘
   (chess-step-debug)
   )
 
-(defun chess-kill-piece (cord)
+(defun chess-kill-piece (oldcord dstcord)
   "吃子"
-  (chess-set-piece-to-situation cord (chess-get-piece-from-situation chess-curt-selected-cord))
-  (chess-set-piece-to-situation chess-curt-selected-cord nil)
+  (chess-set-piece-to-situation dstcord (chess-get-piece-from-situation oldcord))
+  (chess-set-piece-to-situation oldcord nil)
   (setq chess-curt-selected-cord nil)
   (setq chess-curt-side (chess-get-other-side chess-curt-side))
   (draw-chess-board-by-situation chess-situation) ;; 重新绘制棋盘
@@ -422,8 +422,8 @@
         (let ((piece-at-point (chess-get-piece-from-situation cord)))
           (if chess-curt-selected-cord  ;; 当前选子非空
               (if piece-at-point ;; 光标处有棋子
-                  (if (chess-allow-side-p (plist-get piece-at-point 'side)) (chess-select-piece cord) (chess-kill-piece cord))
-                (chess-move-piece cord))
+                  (if (chess-allow-side-p (plist-get piece-at-point 'side)) (chess-select-piece cord) (chess-kill-piece chess-curt-selected-cord cord))
+                (chess-move-piece chess-curt-selected-cord cord))
             (if piece-at-point
                 (if (chess-allow-side-p (plist-get piece-at-point 'side)) (chess-select-piece cord) (message "无效棋步,当前应对方走子."))
               (message "无效棋步，当前未选择棋子且目标位置处无棋子."))
