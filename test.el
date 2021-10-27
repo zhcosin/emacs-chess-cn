@@ -11,7 +11,7 @@
 
 
 ;; 缓冲区名称
-(defconst chess-buffer-name "*chess*")
+(defconst chess-buffer-name "*cn-chess*")
 
 ;; 棋盘起止位置标记
 (defvar board-start (make-marker)) 
@@ -360,9 +360,12 @@
   (make-local-variable 'chess-situation)
   (make-local-variable 'chess-curt-selected-cord)
   (make-local-variable 'chess-curt-side)
+  ;;(setq-local glocal-hl-line-mode -1)
   ;;(define-key chinese-chess-mode-map (kbd "SPC")
     ;;(lambda () (interactive) (message "按下了空格键")))
   )
+
+(add-hook 'chinese-chess-mode-hook (lambda () (setq-local global-hl-line-mode nil)))
 
 (defun chess-get-piece-from-situation (cord)
   "根据坐标获取棋局上的棋子"
@@ -387,7 +390,7 @@
   )
 
 (defun chess-move-piece (cord)
-  "移动棋子，重置当前所选棋子，并将允许走子方设为另一方"
+  "移动棋子"
   (chess-set-piece-to-situation cord (chess-get-piece-from-situation chess-curt-selected-cord))
   (chess-set-piece-to-situation chess-curt-selected-cord nil)
   (setq chess-curt-selected-cord nil)
@@ -397,7 +400,9 @@
   )
 
 (defun chess-kill-piece (cord)
-  "吃子，重置当前所选棋子，并将允许走子方设为另一方"
+  "吃子"
+  (chess-set-piece-to-situation cord (chess-get-piece-from-situation chess-curt-selected-cord))
+  (chess-set-piece-to-situation chess-curt-selected-cord nil)
   (setq chess-curt-selected-cord nil)
   (setq chess-curt-side (chess-get-other-side chess-curt-side))
   (draw-chess-board-by-situation chess-situation) ;; 重新绘制棋盘
