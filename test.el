@@ -334,6 +334,8 @@
   ;;(princ board-start)
   ;;(princ board-end)
   ;;(princ (position-to-coordinate 1655))
+  ;;(princ (position-to-coordinate 1279))
+  ;;(princ (coordinate-to-position '(1 . 7)))
   )
 
 
@@ -349,7 +351,7 @@
            (while (< (point) pos)
              (forward-char)
              (setq col (1+ col))
-             (unless (and (> (char-after) ?\x00) (< (char-after) ?\xff)) ;; 一个中文字符占据两个英文字符的位置
+             (unless (and (> (char-before) ?\x00) (< (char-before) ?\xff)) ;; 一个中文字符占据两个英文字符的位置
                (setq col (1+ col)))
              (when (char-equal (char-before) ?\n)
                (forward-char grid-offset)
@@ -359,24 +361,27 @@
 
 ;; 棋盘坐标转换为缓冲区位置
 (defun coordinate-to-position (cord)
-  (and (>= (nth 0 cord) 0)
-       (<= (nth 0 cord) 8)
-       (>= (nth 1 cord) 0)
-       (<= (nth 1 cord) 9)
+  (and (>= (car cord) 0)
+       (<= (car cord) 8)
+       (>= (cdr cord) 0)
+       (<= (cdr cord) 9)
        (let ((row 0) (col 0) (pos board-start))
          (let ((board-at-row (nth row chess-situation)))
-           (while (< row (nth 1 cord))
+           (while (< row (cdr cord))
              (setq board-at-row (nth row chess-situation))
+             (setq pos (+ pos grid-offset)) ;; 棋盘左侧偏移
              (while (< col 9)
                ;; 若 (col . row) 处有棋子，则增加 grid-width - 1 个位置，否则 增加 grid-width 个位置
                (setq pos (+ pos (if (null (nth col board-at-row)) (if (= col 8) 2 grid-width) (if (= col 8) 1 (1- grid-width)))))
                (setq col (1+ col)))  
              (setq pos (1+ pos))  ;; 换行符占据一个位置
+             (setq pos (+ pos (* grid-offset (1- grid-high)))) ;; 棋盘左侧偏移(棋盘方格调试纯字符行)
              (setq pos (+ pos (* (1- grid-high) (+ 3 (* grid-width 8))))) ;; 棋盘方格高度产生的纯字符行，加上末尾的棋子位置(2个字符)和1个换行符.
              (setq row (1+ row))
              (setq col 0))
            (setq board-at-row (nth row chess-situation))
-           (while (< col (nth 0 cord))
+           (setq pos (+ pos grid-offset)) ;; 棋盘左侧偏移
+           (while (< col (car cord))
                ;; 若 (col . row) 处有棋子，则增加 grid-width - 1 个位置，否则 增加 grid-width 个位置
                (setq pos (+ pos (if (null (nth col board-at-row)) (if (= col 8) 2 grid-width) (if (= col 8) 1 (1- grid-width)))))
                (setq col (1+ col)))
@@ -397,7 +402,7 @@
 
 (defun chess-get-piece-from-situation (cord)
   "根据坐标获取棋局上的棋子"
-  (nth (car cord) (nth (cdr cord) chess-situation)))
+  (when cord (nth (car cord) (nth (cdr cord) chess-situation))))
 
 (defun chess-set-piece-to-situation (cord piece)
   "根据坐标设置棋子"
@@ -412,15 +417,16 @@
 
 (defun chess-select-piece (cord)
   "选择棋子, 更新当前所选棋子，并将允许走子方设为所选棋子所属方(以应对棋局首步棋)"
+  ;;(message (format "select piece %s, origin selected: %s." cord chess-curt-selected-cord))
   (setq chess-curt-selected-cord cord)
   (setq chess-curt-side (plist-get (chess-get-piece-from-situation cord) 'side))
-  (chess-step-debug)
-  )
+  (chess-step-debug))
 
 ;; 走子
 ;; 走子之前先判断是否符合兵种走棋规则，包括基本规则及棋局规则
 (defun chess-move-piece (oldcord dstcord)
   "移动棋子"
+  ;;(message (format "move piece from %s to %s" oldcord dstcord))
   (if
       (and 
        (chess-move-kill-base-rule oldcord dstcord)
@@ -434,13 +440,13 @@
           (chess-set-piece-to-situation oldcord nil)
           (setq chess-curt-selected-cord nil)
           (setq chess-curt-side (chess-get-other-side chess-curt-side))
-          (draw-chess-board-by-situation chess-situation)) ;; 重新绘制棋盘
     (message "违反走子规则"))
   ;;(chess-step-debug)
   )
 
 (defun chess-kill-piece (oldcord dstcord)
   "吃子"
+  ;;(message (format "kill piece %s by %s" dstcord oldcord))
   (if
       (and 
        (chess-move-kill-base-rule oldcord dstcord)
@@ -454,7 +460,6 @@
        (chess-set-piece-to-situation oldcord nil)
        (setq chess-curt-selected-cord nil)
        (setq chess-curt-side (chess-get-other-side chess-curt-side))
-       (draw-chess-board-by-situation chess-situation)) ;; 重新绘制棋盘
     (message "违反吃子规则"))
   )
 
@@ -466,8 +471,8 @@
   "走子棋步"
   (interactive)
   (let ((cord (position-to-coordinate (point))))
+        ;;(message (format "落子位置 %s, 落子处棋子 %s，当前选子位置 %s，当前选子 %s." cord (chess-get-piece-from-situation cord) chess-curt-selected-cord (chess-get-piece-from-situation chess-curt-selected-cord)))
     (if cord
-        ;;(message (format "落子位置 (%d, %d)" (car cord) (cdr cord)))
         (let ((piece-at-point (chess-get-piece-from-situation cord)))
           (if chess-curt-selected-cord  ;; 当前选子非空
               (if piece-at-point ;; 光标处有棋子
@@ -478,8 +483,11 @@
               (message "无效棋步，当前未选择棋子且目标位置处无棋子."))
             ))
       (message "落子位置无效"))
-    )
-  )
+    (draw-chess-board-by-situation chess-situation) ;; 重新绘制棋盘
+    ;;(message (format "move point to %s" (coordinate-to-position cord)))
+    (goto-char (coordinate-to-position cord)) ;; 移动光标到落子位置(有coordinate-to-position 有bug)
+    )) 
+  
 
 ;;(add-to-list 'evil-emacs-state-modes 'chinese-chess-mode)
 (evil-define-key 'normal chinese-chess-mode-map (kbd "RET") 'chess-step)
@@ -544,7 +552,7 @@
 
 (defun chess-kill-rule-ma (oldcord dstcord situation)
   "马的吃子规则"
-  (chess-move-rule-ma))
+  (chess-move-rule-ma oldcord dstcord situation))
 
 (defun chess-move-rule-pao (oldcord dstcord situation)
   "炮的移动规则，与车相同"
