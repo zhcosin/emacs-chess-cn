@@ -35,6 +35,10 @@
       (chess-accumulate (cdr li) processor (funcall accumulator init-value (funcall processor (car li))) accumulator)
     init-value))
 
+(defun chess-coordinate-cycle (cord xinc yinc)
+  "棋盘坐标增量计算，超出范围则取余循环"
+  (cons (mod (+ xinc (car cord)) 9) (mod (+ yinc (cdr cord)) 10)))
+
 ;;; }}}
 
 
@@ -396,6 +400,7 @@
   ;;(setq-local glocal-hl-line-mode -1)
   ;;(define-key chinese-chess-mode-map (kbd "SPC")
     ;;(lambda () (interactive) (message "按下了空格键")))
+  ;;(define-key chinese-chess-mode-map (kbd "<up>") 'chess-move-point-up)
   )
 
 (add-hook 'chinese-chess-mode-hook (lambda () (setq-local global-hl-line-mode nil)))
@@ -644,6 +649,33 @@
 (defun chess-kill-rule-bingzu (oldcord dstcord situation)
   "兵卒吃子规则"
   (chess-move-rule-bingzu oldcord dstcord situation))
+
+;; }}}
+
+;; {{{ 光标移动命令
+(defun chess-move-point-to (cord)
+  "移动光标"
+  (goto-char (coordinate-to-position cord)))
+
+(defun chess-move-point-up ()
+  "向上移动一格"
+  (interactive)
+  (chess-move-point-to (chess-coordinate-cycle (position-to-coordinate (point)) 0 -1)))
+
+(defun chess-move-point-down ()
+  "向下移动一格"
+  (interactive)
+  (chess-move-point-to (chess-coordinate-cycle (position-to-coordinate (point)) 0 1)))
+
+(defun chess-move-point-left ()
+  "向左移动一格"
+  (interactive)
+  (chess-move-point-to (chess-coordinate-cycle (position-to-coordinate (point)) -1 0)))
+
+(defun chess-move-point-right ()
+  "向右移动一格"
+  (interactive)
+  (chess-move-point-to (chess-coordinate-cycle (position-to-coordinate (point)) 1 0)))
 
 ;; }}}
 
