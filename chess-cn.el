@@ -462,10 +462,8 @@
           (chess-set-piece-to-situation dstcord (chess-get-piece-from-situation oldcord))
           (chess-set-piece-to-situation oldcord nil)
           (setq chess-curt-selected-cord nil)
-          (setq chess-curt-side (chess-get-other-side chess-curt-side))
-    (message "违反走子规则"))
-  ;;(chess-step-debug)
-  ))
+          (setq chess-curt-side (chess-get-other-side chess-curt-side)))
+    (message "违反走子规则")))
 
 (defun chess-kill-piece (oldcord dstcord)
   "吃子"
@@ -479,12 +477,18 @@
         dstcord
         chess-situation))
       (progn
-       (chess-set-piece-to-situation dstcord (chess-get-piece-from-situation oldcord))
-       (chess-set-piece-to-situation oldcord nil)
-       (setq chess-curt-selected-cord nil)
-       (setq chess-curt-side (chess-get-other-side chess-curt-side))
-    (message "违反吃子规则"))
-  ))
+        (let ((killed-piece (chess-get-piece-from-situation dstcord))
+              (kill-piece (chess-get-piece-from-situation oldcord)))
+          (message (format "%s 被吃掉." killed-piece))
+          (chess-set-piece-to-situation dstcord kill-piece)
+          (chess-set-piece-to-situation oldcord nil)
+          (setq chess-curt-selected-cord nil)
+          (setq chess-curt-side (chess-get-other-side chess-curt-side))
+          (when (plist-get (symbol-value (plist-get killed-piece 'type)) 'is-king) ;; 被吃掉的棋子是将帅，游戏结束
+              (progn
+                (setq chess-game-over t) 
+                (message (format "游戏结束, %s胜出." (plist-get (symbol-value (plist-get kill-piece 'side)) 'name)))))))
+    (message "违反吃子规则")))
 
 (defun chess-allow-side-p (side)
   "是否为允许走子方"
