@@ -184,6 +184,7 @@
 
 (defvar chess-curt-selected-cord nil "当前所选择的棋子坐标")
 (defvar chess-curt-side nil "当前走子对弈方")
+(defvar chess-game-over nil "对弈是否已得出胜负")
 ;; 棋局
 (defvar chess-situation nil "棋局,10x9二维矩阵，元素为棋子")
 (defconst chess-init-situation
@@ -398,6 +399,7 @@
   (make-local-variable 'chess-situation)
   (make-local-variable 'chess-curt-selected-cord)
   (make-local-variable 'chess-curt-side)
+  (make-local-variable 'chess-game-over)
   ;;(setq-local glocal-hl-line-mode -1)
   ;;(define-key chinese-chess-mode-map (kbd "SPC")
     ;;(lambda () (interactive) (message "按下了空格键")))
@@ -409,6 +411,21 @@
 
 (add-hook 'chinese-chess-mode-hook (lambda () (setq-local global-hl-line-mode nil)))
 
+
+;;(add-to-list 'evil-emacs-state-modes 'chinese-chess-mode)
+(evil-define-key 'normal chinese-chess-mode-map (kbd "RET") 'chess-step-cmd)
+
+(evil-define-key 'normal chinese-chess-mode-map (kbd "<up>") 'chess-move-point-up)
+(evil-define-key 'normal chinese-chess-mode-map (kbd "<down>") 'chess-move-point-down)
+(evil-define-key 'normal chinese-chess-mode-map (kbd "<left>") 'chess-move-point-left)
+(evil-define-key 'normal chinese-chess-mode-map (kbd "<right>") 'chess-move-point-right)
+
+(evil-define-key 'normal chinese-chess-mode-map (kbd "k") 'chess-move-point-up)
+(evil-define-key 'normal chinese-chess-mode-map (kbd "j") 'chess-move-point-down)
+(evil-define-key 'normal chinese-chess-mode-map (kbd "h") 'chess-move-point-left)
+(evil-define-key 'normal chinese-chess-mode-map (kbd "l") 'chess-move-point-right)
+
+
 (defun chess-get-piece-from-situation (cord)
   "根据坐标获取棋局上的棋子"
   (when cord (nth (car cord) (nth (cdr cord) chess-situation))))
@@ -416,9 +433,6 @@
 (defun chess-set-piece-to-situation (cord piece)
   "根据坐标设置棋子"
   (setf (nth (car cord) (nth (cdr cord) chess-situation)) piece))
-
-(chess-get-piece-from-situation '(0 . 0))
-
 
 (defun chess-get-other-side (side)
   "获取对弈对方"
@@ -451,7 +465,7 @@
           (setq chess-curt-side (chess-get-other-side chess-curt-side))
     (message "违反走子规则"))
   ;;(chess-step-debug)
-  )
+  ))
 
 (defun chess-kill-piece (oldcord dstcord)
   "吃子"
@@ -470,15 +484,21 @@
        (setq chess-curt-selected-cord nil)
        (setq chess-curt-side (chess-get-other-side chess-curt-side))
     (message "违反吃子规则"))
-  )
+  ))
 
 (defun chess-allow-side-p (side)
   "是否为允许走子方"
   (or (null chess-curt-side) (eq chess-curt-side side)))
 
+(defun chess-step-cmd ()
+  "走子棋步命令"
+  (interactive)
+  (if chess-game-over
+      (message "对弈已结束")
+    (chess-step)))
+
 (defun chess-step ()
   "走子棋步"
-  (interactive)
   (let ((cord (position-to-coordinate (point))))
         ;;(message (format "落子位置 %s, 落子处棋子 %s，当前选子位置 %s，当前选子 %s." cord (chess-get-piece-from-situation cord) chess-curt-selected-cord (chess-get-piece-from-situation chess-curt-selected-cord)))
     (if cord
@@ -497,22 +517,6 @@
     (goto-char (coordinate-to-position cord)) ;; 移动光标到落子位置(有coordinate-to-position 有bug)
     )) 
   
-
-;;(add-to-list 'evil-emacs-state-modes 'chinese-chess-mode)
-(evil-define-key 'normal chinese-chess-mode-map (kbd "RET") 'chess-step)
-
-(evil-define-key 'normal chinese-chess-mode-map (kbd "<up>") 'chess-move-point-up)
-(evil-define-key 'normal chinese-chess-mode-map (kbd "<down>") 'chess-move-point-down)
-(evil-define-key 'normal chinese-chess-mode-map (kbd "<left>") 'chess-move-point-left)
-(evil-define-key 'normal chinese-chess-mode-map (kbd "<right>") 'chess-move-point-right)
-
-(evil-define-key 'normal chinese-chess-mode-map (kbd "k") 'chess-move-point-up)
-(evil-define-key 'normal chinese-chess-mode-map (kbd "j") 'chess-move-point-down)
-(evil-define-key 'normal chinese-chess-mode-map (kbd "h") 'chess-move-point-left)
-(evil-define-key 'normal chinese-chess-mode-map (kbd "l") 'chess-move-point-right)
-
-;;(add-hook 'chinese-chess-mode-hook (lambda () (progn (evil-mode -1) (global-hl-line-mode -1)))
-
 (defun chess-step-debug ()
   "棋步调试"
   (interactive)
