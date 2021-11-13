@@ -1,5 +1,7 @@
 ;; 启用 font-lock 时设置文本外观应使用 font-lock-face 文本属性，未启用 font-lock 时应使用 face 属性.
 
+;; {{{ 辅助函数
+
 ;; elisp 中的 or 是一个 macro 而非 function，作代理
 (defun chess-or-fun (x y)
   (or x y))
@@ -12,6 +14,25 @@
    ((> num 1)
     (concat str (scale-string str (1- num))))
    (t nil)))
+
+
+(defun chess-get-range-between-sorted (a b)
+  "得到 a 与 b(>a) 之间的整数列表"
+  (if (>= (1+ a) b) nil (cons (1+ a) (chess-get-range-between-sorted (1+ a) b))))
+
+(defun chess-get-range-between (a b)
+  "得到 a 与 b (未指定大小)之间的整数列表"
+  (chess-get-range-between-sorted (min a b) (max a b)))
+
+;; 通用累加器
+(defun chess-accumulate (li processor init-value accumulator)
+  "累加器"
+  (message (format "accumulate for list %s with initial value %s by elemente processor %s and accumulator %s" li init-value processor accumulator))
+  (if li
+      (chess-accumulate (cdr li) processor (funcall accumulator init-value (funcall processor (car li))) accumulator)
+    init-value))
+
+;;; }}}
 
 
 ;; 缓冲区名称
@@ -108,13 +129,13 @@
 
 
 ;; 兵种
-(defconst chess-piece-type-ju '(name (side-blue "車" side-red "車") move-rule chess-move-rule-ju kill-rule nil is-king nil) "")
-(defconst chess-piece-type-ma '(name (side-blue "馬" side-red "馬") move-rule chess-move-rule-stup-always-allow kill-rule nil is-king nil) "")
-(defconst chess-piece-type-pao '(name (side-blue "砲" side-red "炮") move-rule chess-move-rule-stup-always-allow kill-rule nil is-king nil) "")
-(defconst chess-piece-type-bingzu '(name (side-blue "卒" side-red "兵") move-rule chess-move-rule-stup-always-allow kill-rule nil is-king nil) "")
-(defconst chess-piece-type-xiang '(name (side-blue "象" side-red "相") move-rule chess-move-rule-stup-always-allow kill-rule nil is-king nil) "")
-(defconst chess-piece-type-shi '(name (side-blue "士" side-red "仕") move-rule chess-move-rule-stup-always-allow kill-rule nil is-king nil) "")
-(defconst chess-piece-type-jiangshuai '(name (side-blue "將" side-red "帥") move-rule chess-move-rule-stup-always-allow kill-rule nil is-king t) "")
+(defconst chess-piece-type-ju '(name (side-blue "車" side-red "車") move-rule chess-move-rule-ju kill-rule chess-kill-rule-ju is-king nil) "")
+(defconst chess-piece-type-ma '(name (side-blue "馬" side-red "馬") move-rule chess-move-rule-ma kill-rule chess-kill-rule-ma is-king nil) "")
+(defconst chess-piece-type-pao '(name (side-blue "砲" side-red "炮") move-rule chess-move-rule-pao kill-rule chess-kill-rule-pao is-king nil) "")
+(defconst chess-piece-type-bingzu '(name (side-blue "卒" side-red "兵") move-rule chess-move-rule-stup-always-allow kill-rule chess-kill-rule-stup-always-allow is-king nil) "")
+(defconst chess-piece-type-xiang '(name (side-blue "象" side-red "相") move-rule chess-move-rule-stup-always-allow kill-rule chess-kill-rule-stup-always-allow is-king nil) "")
+(defconst chess-piece-type-shi '(name (side-blue "士" side-red "仕") move-rule chess-move-rule-stup-always-allow kill-rule chess-kill-rule-stup-always-allow is-king nil) "")
+(defconst chess-piece-type-jiangshuai '(name (side-blue "將" side-red "帥") move-rule chess-move-rule-stup-always-allow kill-rule chess-kill-rule-stup-always-allow is-king t) "")
 
 ;; 蓝方棋子
 (defvar chess-piece-blue-jiang '(side side-blue type chess-piece-type-jiangshuai) "蓝将")
@@ -417,12 +438,21 @@
 
 (defun chess-kill-piece (oldcord dstcord)
   "吃子"
-  (chess-set-piece-to-situation dstcord (chess-get-piece-from-situation oldcord))
-  (chess-set-piece-to-situation oldcord nil)
-  (setq chess-curt-selected-cord nil)
-  (setq chess-curt-side (chess-get-other-side chess-curt-side))
-  (draw-chess-board-by-situation chess-situation) ;; 重新绘制棋盘
-  (chess-step-debug)
+  (if
+      (and 
+       (chess-move-kill-base-rule oldcord dstcord)
+       (funcall
+        (plist-get (symbol-value (plist-get (chess-get-piece-from-situation oldcord) 'type)) 'kill-rule)
+        oldcord
+        dstcord
+        chess-situation))
+      (progn
+       (chess-set-piece-to-situation dstcord (chess-get-piece-from-situation oldcord))
+       (chess-set-piece-to-situation oldcord nil)
+       (setq chess-curt-selected-cord nil)
+       (setq chess-curt-side (chess-get-other-side chess-curt-side))
+       (draw-chess-board-by-situation chess-situation)) ;; 重新绘制棋盘
+    (message "违反吃子规则"))
   )
 
 (defun chess-allow-side-p (side)
@@ -461,8 +491,11 @@
 
 (defun chess-move-rule-stup-always-allow (oldcord dstcord situation)
   "移动规则桩，测试使用"
-  t
-  )
+  t)
+
+(defun chess-kill-rule-stup-always-allow (oldcord dstcord situation)
+  "吃子规则桩，测试使用"
+  t)
 
 (defun chess-move-kill-base-rule (oldcord dstcord)
   "走子/吃子基本规则，不能走出棋盘范围外，不能原地踏步"
@@ -471,14 +504,14 @@
        (not (equal oldcord dstcord))))
 
 
-(defun chess-move-base-rule-ju (oldcord dstcord)
-  "车的基本走法"
+(defun chess-move-line-rule (oldcord dstcord)
+  "直线判断"
   (or (equal (car oldcord) (car dstcord)) (equal (cdr oldcord) (cdr dstcord))))
 
 (defun chess-move-rule-ju (oldcord dstcord situation)
   "车的移动规则，判断 oldcord 与 dstcord 之间(不含端口)上是否有棋子，有棋子则不能移动，否则可以移动"
   (and
-   (chess-move-base-rule-ju oldcord dstcord)
+   (chess-move-line-rule oldcord dstcord)
    (not
     (chess-accumulate
      (cond
@@ -493,32 +526,45 @@
      nil 
      'chess-or-fun))))
 
-(defun chess-get-range-between-sorted (a b)
-  "得到 a 与 b(>a) 之间的整数列表"
-  (if (>= (1+ a) b) nil (cons (1+ a) (chess-get-range-between-sorted (1+ a) b))))
+(defun chess-kill-rule-ju (oldcord dstcord situation)
+  "车的吃子规则，与移动规则相同"
+  (chess-move-rule-ju oldcord dstcord situation))
 
-(defun chess-get-range-between (a b)
-  "得到 a 与 b (未指定大小)之间的整数列表"
-  (chess-get-range-between-sorted (min a b) (max a b)))
+(defun chess-move-rule-ma (oldcord dstcord situation)
+  "马的移动规则"
+  (cond
+   ((and (equal 1 (abs (- (car oldcord) (car dstcord)))) (equal 2 (abs (- (cdr oldcord) (cdr dstcord))))) ;; 竖日字
+    (not (chess-get-piece-from-situation (cons (car oldcord) (/ (+ (cdr oldcord) (cdr dstcord)) 2))))) ;; 绊腿判断
+   ((and (equal 2 (abs (- (car oldcord) (car dstcord)))) (equal 1 (abs (- (cdr oldcord) (cdr dstcord))))) ;; 横日字
+    (not (chess-get-piece-from-situation (cons (/ (+ (car oldcord) (car dstcord)) 2) (cdr oldcord))))) ;; 绊腿判断
+   nil))
 
-;;(mapcar (lambda (x) (cons 3 x)) '(1 2 3 4 5))
+(defun chess-kill-rule-ma (oldcord dstcord situation)
+  "马的吃子规则"
+  (chess-move-rule-ma))
 
+(defun chess-move-rule-pao (oldcord dstcord situation)
+  "炮的移动规则，与车相同"
+  (chess-move-rule-ju oldcord dstcord situation))
 
-(defun chess-accumulate (li processor init-value accumulator)
-  "累加器"
-  (message (format "accumulate for list %s with initial value %s by elemente processor %s and accumulator %s" li init-value processor accumulator))
-  (if li
-      (chess-accumulate (cdr li) processor (funcall accumulator init-value (funcall processor (car li))) accumulator)
-    init-value)
-  )
-
-;;(chess-accumulate '(nil t nil t nil nil) 'identity t (function 'or))
-;;(chess-accumulate '(nil t nil t nil nil) 'identity t (function or))
-;;(chess-accumulate '(nil t nil t nil nil) 'identity t 'or)
-;;(chess-accumulate '(nil t nil t nil nil) 'identity t #'or)
-;;(chess-accumulate '(nil t nil t nil nil) 'identity t or)
-;;(setq myorf (function or))
-;;(chess-accumulate '(nil t nil t nil nil) 'identity t myorf)
-
+(defun chess-kill-rule-pao (oldcord dstcord situation)
+  "炮的吃子规则，需要有炮台"
+  (and
+   (chess-move-line-rule oldcord dstcord)
+   (equal
+    1
+    (chess-accumulate
+     (cond
+      ((equal (car oldcord) (car dstcord))
+       (mapcar (lambda (x) (cons (car oldcord) x))
+                (chess-get-range-between (cdr oldcord) (cdr dstcord))))
+      ((equal (cdr oldcord) (cdr dstcord))
+       (mapcar (lambda (x) (cons x (cdr oldcord)))
+               (chess-get-range-between (car oldcord) (car dstcord))))
+      0)
+     (lambda (cord) (if (chess-get-piece-from-situation cord) 1 0))
+     0 
+     '+))))
 
 ;; }}}
+
