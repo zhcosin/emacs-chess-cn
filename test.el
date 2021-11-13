@@ -319,6 +319,7 @@
   (setq chess-curt-selected-cord nil)
 
   (draw-chess-board-by-situation chess-situation)
+  (chess-move-point-to '(0 . 0))
   ;;(setq buffer-read-only t)
   ;;(princ board-start)
   ;;(princ board-end)
@@ -400,7 +401,10 @@
   ;;(setq-local glocal-hl-line-mode -1)
   ;;(define-key chinese-chess-mode-map (kbd "SPC")
     ;;(lambda () (interactive) (message "按下了空格键")))
-  ;;(define-key chinese-chess-mode-map (kbd "<up>") 'chess-move-point-up)
+  (define-key chinese-chess-mode-map (kbd "<up>") 'chess-move-point-up)
+  (define-key chinese-chess-mode-map (kbd "<down>") 'chess-move-point-down)
+  (define-key chinese-chess-mode-map (kbd "<left>") 'chess-move-point-left)
+  (define-key chinese-chess-mode-map (kbd "<right>") 'chess-move-point-right)
   )
 
 (add-hook 'chinese-chess-mode-hook (lambda () (setq-local global-hl-line-mode nil)))
@@ -496,6 +500,17 @@
 
 ;;(add-to-list 'evil-emacs-state-modes 'chinese-chess-mode)
 (evil-define-key 'normal chinese-chess-mode-map (kbd "RET") 'chess-step)
+
+(evil-define-key 'normal chinese-chess-mode-map (kbd "<up>") 'chess-move-point-up)
+(evil-define-key 'normal chinese-chess-mode-map (kbd "<down>") 'chess-move-point-down)
+(evil-define-key 'normal chinese-chess-mode-map (kbd "<left>") 'chess-move-point-left)
+(evil-define-key 'normal chinese-chess-mode-map (kbd "<right>") 'chess-move-point-right)
+
+(evil-define-key 'normal chinese-chess-mode-map (kbd "k") 'chess-move-point-up)
+(evil-define-key 'normal chinese-chess-mode-map (kbd "j") 'chess-move-point-down)
+(evil-define-key 'normal chinese-chess-mode-map (kbd "h") 'chess-move-point-left)
+(evil-define-key 'normal chinese-chess-mode-map (kbd "l") 'chess-move-point-right)
+
 ;;(add-hook 'chinese-chess-mode-hook (lambda () (progn (evil-mode -1) (global-hl-line-mode -1)))
 
 (defun chess-step-debug ()
