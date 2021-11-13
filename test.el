@@ -135,7 +135,7 @@
 (defconst chess-piece-type-ju '(name (side-blue "車" side-red "車") move-rule chess-move-rule-ju kill-rule chess-kill-rule-ju is-king nil) "")
 (defconst chess-piece-type-ma '(name (side-blue "馬" side-red "馬") move-rule chess-move-rule-ma kill-rule chess-kill-rule-ma is-king nil) "")
 (defconst chess-piece-type-pao '(name (side-blue "砲" side-red "炮") move-rule chess-move-rule-pao kill-rule chess-kill-rule-pao is-king nil) "")
-(defconst chess-piece-type-bingzu '(name (side-blue "卒" side-red "兵") move-rule chess-move-rule-stup-always-allow kill-rule chess-kill-rule-stup-always-allow is-king nil) "")
+(defconst chess-piece-type-bingzu '(name (side-blue "卒" side-red "兵") move-rule chess-move-rule-bingzu kill-rule chess-kill-rule-bingzu is-king nil) "")
 (defconst chess-piece-type-xiang '(name (side-blue "象" side-red "相") move-rule chess-move-rule-xiang kill-rule chess-kill-rule-xiang is-king nil) "")
 (defconst chess-piece-type-shi '(name (side-blue "士" side-red "仕") move-rule chess-move-rule-shi kill-rule chess-kill-rule-shi is-king nil) "")
 (defconst chess-piece-type-jiangshuai '(name (side-blue "將" side-red "帥") move-rule chess-move-rule-jiangshuai kill-rule chess-kill-rule-jiangshuai is-king t) "")
@@ -613,6 +613,29 @@
 (defun chess-kill-rule-xiang (oldcord dstcord situation)
   "象相吃子规则"
   (chess-move-rule-xiang oldcord dstcord situation))
+
+(defun chess-move-rule-bingzu (oldcord dstcord situation)
+  "兵卒走子规则"
+  (if
+     (eq 'side-red (plist-get (chess-get-piece-from-situation oldcord) 'side))
+      (or
+          (and ;; 前进
+           (equal (car oldcord) (car dstcord))
+           (equal 1 (- (cdr oldcord) (cdr dstcord))))
+          (and
+           (< (cdr oldcord) 5) ;; 已过河
+           (and (equal (cdr oldcord) (cdr dstcord)) (equal 1 (abs (- (car oldcord) (car dstcord)))))))
+      (or
+          (and ;; 前进
+           (equal (car oldcord) (car dstcord))
+           (equal -1 (- (cdr oldcord) (cdr dstcord))))
+          (and
+           (> (cdr oldcord) 4) ;; 已过河
+           (and (equal (cdr oldcord) (cdr dstcord)) (equal 1 (abs (- (car oldcord) (car dstcord)))))))))
+
+(defun chess-kill-rule-bingzu (oldcord dstcord situation)
+  "兵卒吃子规则"
+  (chess-move-rule-bingzu oldcord dstcord situation))
 
 ;; }}}
 
