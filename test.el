@@ -15,6 +15,9 @@
     (concat str (scale-string str (1- num))))
    (t nil)))
 
+(defun chess-range-between-p (a b x &optional left-eq right-eq)
+  "判断x是否在 a 与 b 之间(a与b大小无要求)，left-eq 与 right-eq 为是否允许等于左右边界"
+  (and (funcall (if left-eq '>= '>) x (min a b)) (funcall (if right-eq '<= '<) x (max a b))))
 
 (defun chess-get-range-between-sorted (a b)
   "得到 a 与 b(>a) 之间的整数列表"
@@ -27,7 +30,7 @@
 ;; 通用累加器
 (defun chess-accumulate (li processor init-value accumulator)
   "累加器"
-  (message (format "accumulate for list %s with initial value %s by elemente processor %s and accumulator %s" li init-value processor accumulator))
+  ;;(message (format "accumulate for list %s with initial value %s by elemente processor %s and accumulator %s" li init-value processor accumulator))
   (if li
       (chess-accumulate (cdr li) processor (funcall accumulator init-value (funcall processor (car li))) accumulator)
     init-value))
@@ -133,9 +136,9 @@
 (defconst chess-piece-type-ma '(name (side-blue "馬" side-red "馬") move-rule chess-move-rule-ma kill-rule chess-kill-rule-ma is-king nil) "")
 (defconst chess-piece-type-pao '(name (side-blue "砲" side-red "炮") move-rule chess-move-rule-pao kill-rule chess-kill-rule-pao is-king nil) "")
 (defconst chess-piece-type-bingzu '(name (side-blue "卒" side-red "兵") move-rule chess-move-rule-stup-always-allow kill-rule chess-kill-rule-stup-always-allow is-king nil) "")
-(defconst chess-piece-type-xiang '(name (side-blue "象" side-red "相") move-rule chess-move-rule-stup-always-allow kill-rule chess-kill-rule-stup-always-allow is-king nil) "")
-(defconst chess-piece-type-shi '(name (side-blue "士" side-red "仕") move-rule chess-move-rule-stup-always-allow kill-rule chess-kill-rule-stup-always-allow is-king nil) "")
-(defconst chess-piece-type-jiangshuai '(name (side-blue "將" side-red "帥") move-rule chess-move-rule-stup-always-allow kill-rule chess-kill-rule-stup-always-allow is-king t) "")
+(defconst chess-piece-type-xiang '(name (side-blue "象" side-red "相") move-rule chess-move-rule-xiang kill-rule chess-kill-rule-xiang is-king nil) "")
+(defconst chess-piece-type-shi '(name (side-blue "士" side-red "仕") move-rule chess-move-rule-shi kill-rule chess-kill-rule-shi is-king nil) "")
+(defconst chess-piece-type-jiangshuai '(name (side-blue "將" side-red "帥") move-rule chess-move-rule-jiangshuai kill-rule chess-kill-rule-jiangshuai is-king t) "")
 
 ;; 蓝方棋子
 (defvar chess-piece-blue-jiang '(side side-blue type chess-piece-type-jiangshuai) "蓝将")
@@ -565,6 +568,51 @@
      (lambda (cord) (if (chess-get-piece-from-situation cord) 1 0))
      0 
      '+))))
+
+(defun chess-move-rule-jiangshuai (oldcord dstcord situation)
+  "将帅走子规则"
+  (and
+   (chess-range-between-p 3 5 (car dstcord) t t) ;; 不能离开九宫格
+   (if
+     (eq 'side-red (plist-get (chess-get-piece-from-situation oldcord) 'side))
+     (chess-range-between-p 7 9 (cdr dstcord) t t)
+     (chess-range-between-p 0 2 (cdr dstcord) t t))
+   (equal 1 (+ (abs (- (car oldcord) (car dstcord))) (abs (- (cdr oldcord) (cdr dstcord))))))) ;; 只能单步走
+;; TODO: 将帅不可见面
+
+(defun chess-kill-rule-jiangshuai (oldcord dstcord situation)
+  "将帅吃子规则，与走子规则相同"
+  (chess-move-rule-jiangshuai oldcord dstcord situation))
+
+(defun chess-move-rule-shi (oldcord dstcord situation)
+  "士仕走子规则"
+  (and
+   (chess-range-between-p 3 5 (car dstcord) t t) ;; 不能离开九宫格
+   (if
+     (eq 'side-red (plist-get (chess-get-piece-from-situation oldcord) 'side))
+     (chess-range-between-p 7 9 (cdr dstcord) t t)
+     (chess-range-between-p 0 2 (cdr dstcord) t t))
+   (equal 1 (abs (- (car oldcord) (car dstcord))))
+   (equal 1 (abs (- (cdr oldcord) (cdr dstcord))))))
+
+(defun chess-kill-rule-shi (oldcord dstcord situation)
+  "士仕吃子规则"
+  (chess-move-rule-shi oldcord dstcord situation))
+
+(defun chess-move-rule-xiang (oldcord dstcord situation)
+  "象相走子规则 "
+  (and
+   (and ;; 田字规则
+    (equal 2 (abs (- (car oldcord) (car dstcord))))
+    (equal 2 (abs (- (cdr oldcord) (cdr dstcord)))))
+   (not (chess-get-piece-from-situation (cons (/ (+ (car oldcord) (car dstcord)) 2) (/ (+ (cdr oldcord) (cdr dstcord)) 2)))) ;; 未填心
+   (if (eq 'side-red (plist-get (chess-get-piece-from-situation oldcord) 'side)) ;; 不可过河
+       (chess-range-between-p 5 9 (cdr dstcord) t t)
+     (chess-range-between-p 0 4 (cdr dstcord) t t))))
+
+(defun chess-kill-rule-xiang (oldcord dstcord situation)
+  "象相吃子规则"
+  (chess-move-rule-xiang oldcord dstcord situation))
 
 ;; }}}
 
