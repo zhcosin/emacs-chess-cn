@@ -451,7 +451,7 @@
           (when (plist-get (symbol-value (plist-get killed-piece 'type)) 'is-king) ;; 被吃掉的棋子是将帅，游戏结束
               (progn
                 (plist-put chess-cn--playing 'chess-cn--game-over t) 
-                (message (format "游戏结束, %s胜出." (plist-get (symbol-value (plist-get kill-piece 'side)) 'name)))))))
+                (message (format "对弈结束, %s胜出." (plist-get (symbol-value (plist-get kill-piece 'side)) 'name)))))))
     (message "违反吃子规则")))
 
 (defun chess-cn--allow-side-p (side)
