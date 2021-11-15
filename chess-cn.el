@@ -90,6 +90,13 @@
   "棋盘坐标增量计算，超出范围则取余循环"
   (cons (mod (+ xinc (car cord)) 9) (mod (+ yinc (cdr cord)) 10)))
 
+(defun chess-cn--get-string-from-file (filePath)
+  "Return filePath's file content."
+  (with-temp-buffer
+    (insert-file-contents filePath)
+    (buffer-string)))
+;; thanks to “Pascal J Bourguignon” and “TheFlyingDutchman [zzbba…@aol.com]”. 2010-09-02
+
 ;;; }}}
 
 ;; {{{ 字符界面表示层
@@ -696,6 +703,24 @@
   (let ((now-decoded (decode-time (current-time))))
     (write-region (format "%s" chess-cn--playing) nil
                   (concat (file-name-as-directory chess-cn--saved-dir) (format-time-string "%Y-%m-%dT%H%M%S.chess")))))
+
+(defun chess-cn--load ()
+  "加载外部棋局"
+  (interactive)
+  (get-buffer-create chess-cn--buffer-name)
+  (switch-to-buffer chess-cn--buffer-name)
+  (chinese-chess-cn--mode)
+  (setq buffer-read-only nil)
+  (erase-buffer)
+  (font-lock-mode 1)
+  (insert chess-cn--banner)
+  (set-marker chess-cn--board-start (point)) ;; 棋盘开始位置标记
+  (insert "\n")
+  (set-marker chess-cn--board-end (point)) ;; 棋盘结束位置标记
+  (setq chess-cn--playing (read (chess-cn--get-string-from-file (read-file-name "请选择棋局文件" (file-name-as-directory chess-cn--saved-dir)))))
+  (chess-cn--draw-board-by-situation (plist-get chess-cn--playing 'chess-cn--situation)) ;; 绘制棋盘
+  (chess-cn--move-point-to '(0 . 0)) ;; 初始化光标位置
+  )
 
 
 (provide 'chess-cn)
