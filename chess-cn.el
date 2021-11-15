@@ -324,17 +324,17 @@
 (defconst chess-cn--piece-red-bing-5 '(side chess-cn--side-red type chess-cn--piece-type-bingzu) "红卒5")
 
 (defconst chess-cn--init-situation
-  (list 
-   (list chess-cn--piece-blue-ju-1 chess-cn--piece-blue-ma-1 chess-cn--piece-blue-xiang-1 chess-cn--piece-blue-shi-1 chess-cn--piece-blue-jiang chess-cn--piece-blue-shi-2 chess-cn--piece-blue-xiang-2 chess-cn--piece-blue-ma-2 chess-cn--piece-blue-ju-2)
-   (list nil nil nil nil nil nil nil nil nil)
-   (list nil chess-cn--piece-blue-pao-1 nil nil nil nil nil chess-cn--piece-blue-pao-2 nil)
-   (list chess-cn--piece-blue-zu-1 nil chess-cn--piece-blue-zu-2 nil chess-cn--piece-blue-zu-3 nil chess-cn--piece-blue-zu-4 nil chess-cn--piece-blue-zu-5)
-   (list nil nil nil nil nil nil nil nil nil)
-   (list nil nil nil nil nil nil nil nil nil)
-   (list chess-cn--piece-red-bing-1 nil chess-cn--piece-red-bing-2 nil chess-cn--piece-red-bing-3 nil chess-cn--piece-red-bing-4 nil chess-cn--piece-red-bing-5)
-   (list nil chess-cn--piece-red-pao-1 nil nil nil nil nil chess-cn--piece-red-pao-2 nil)
-   (list nil nil nil nil nil nil nil nil nil)
-   (list chess-cn--piece-red-ju-1 chess-cn--piece-red-ma-1 chess-cn--piece-red-xiang-1 chess-cn--piece-red-shi-1 chess-cn--piece-red-shuai chess-cn--piece-red-shi-2 chess-cn--piece-red-xiang-2 chess-cn--piece-red-ma-2 chess-cn--piece-red-ju-2)
+  '(
+   (chess-cn--piece-blue-ju-1 chess-cn--piece-blue-ma-1 chess-cn--piece-blue-xiang-1 chess-cn--piece-blue-shi-1 chess-cn--piece-blue-jiang chess-cn--piece-blue-shi-2 chess-cn--piece-blue-xiang-2 chess-cn--piece-blue-ma-2 chess-cn--piece-blue-ju-2)
+   (nil nil nil nil nil nil nil nil nil)
+   (nil chess-cn--piece-blue-pao-1 nil nil nil nil nil chess-cn--piece-blue-pao-2 nil)
+   (chess-cn--piece-blue-zu-1 nil chess-cn--piece-blue-zu-2 nil chess-cn--piece-blue-zu-3 nil chess-cn--piece-blue-zu-4 nil chess-cn--piece-blue-zu-5)
+   (nil nil nil nil nil nil nil nil nil)
+   (nil nil nil nil nil nil nil nil nil)
+   (chess-cn--piece-red-bing-1 nil chess-cn--piece-red-bing-2 nil chess-cn--piece-red-bing-3 nil chess-cn--piece-red-bing-4 nil chess-cn--piece-red-bing-5)
+   (nil chess-cn--piece-red-pao-1 nil nil nil nil nil chess-cn--piece-red-pao-2 nil)
+   (nil nil nil nil nil nil nil nil nil)
+   (chess-cn--piece-red-ju-1 chess-cn--piece-red-ma-1 chess-cn--piece-red-xiang-1 chess-cn--piece-red-shi-1 chess-cn--piece-red-shuai chess-cn--piece-red-shi-2 chess-cn--piece-red-xiang-2 chess-cn--piece-red-ma-2 chess-cn--piece-red-ju-2)
    )
   "初始棋局")
 
@@ -349,15 +349,15 @@
 
 (defun chess-cn--get-side-of-piece (chess-cn--piece)
   "获取棋子的对弈方信息"
-  (chess-cn--get-side-by-flag (plist-get chess-cn--piece 'side)))
+  (chess-cn--get-side-by-flag (plist-get (symbol-value chess-cn--piece) 'side)))
 
 (defun chess-cn--get-piece-name (chess-cn--piece)
   "获取棋子名称"
-  (plist-get (plist-get (symbol-value (plist-get chess-cn--piece 'type)) 'name) (plist-get chess-cn--piece 'side)))
+  (plist-get (plist-get (symbol-value (plist-get (symbol-value chess-cn--piece) 'type)) 'name) (plist-get (symbol-value chess-cn--piece) 'side)))
 
 (defun chess-cn--get-piece-face (chess-cn--piece)
   "获取棋子用于显示的文本属性"
-  (plist-get (symbol-value (plist-get chess-cn--piece 'side)) 'style))
+  (plist-get (symbol-value (plist-get (symbol-value chess-cn--piece) 'side)) 'style))
 
 (defun chess-cn--copy-init-situation (chess-cn--init-situation)
   "深拷贝初始棋局"
@@ -406,7 +406,7 @@
 (defun chess-cn--select-piece (cord)
   "选择棋子, 更新当前所选棋子，并将允许走子方设为所选棋子所属方(以应对棋局首步棋)"
   (plist-put chess-cn--playing 'chess-cn--curt-selected-cord cord)
-  (plist-put chess-cn--playing 'chess-cn--curt-side (plist-get (chess-cn--get-piece-from-situation cord) 'side))
+  (plist-put chess-cn--playing 'chess-cn--curt-side (plist-get (symbol-value (chess-cn--get-piece-from-situation cord)) 'side))
   (chess-cn--step-debug))
 
 ;; 走子
@@ -418,7 +418,7 @@
       (and 
        (chess-cn--move-kill-base-rule oldcord dstcord)
        (funcall
-        (plist-get (symbol-value (plist-get (chess-cn--get-piece-from-situation oldcord) 'type)) 'move-rule)
+        (plist-get (symbol-value (plist-get (symbol-value (chess-cn--get-piece-from-situation oldcord)) 'type)) 'move-rule)
         oldcord
         dstcord
         (plist-get chess-cn--playing 'chess-cn--situation)))
@@ -436,7 +436,7 @@
       (and 
        (chess-cn--move-kill-base-rule oldcord dstcord)
        (funcall
-        (plist-get (symbol-value (plist-get (chess-cn--get-piece-from-situation oldcord) 'type)) 'kill-rule)
+        (plist-get (symbol-value (plist-get (symbol-value (chess-cn--get-piece-from-situation oldcord)) 'type)) 'kill-rule)
         oldcord
         dstcord
         (plist-get chess-cn--playing 'chess-cn--situation)))
@@ -448,10 +448,10 @@
           (chess-cn--set-piece-to-situation oldcord nil)
           (plist-put chess-cn--playing 'chess-cn--curt-selected-cord nil)
           (plist-put chess-cn--playing 'chess-cn--curt-side (chess-cn--get-other-side (plist-get chess-cn--playing 'chess-cn--curt-side)))
-          (when (plist-get (symbol-value (plist-get killed-piece 'type)) 'is-king) ;; 被吃掉的棋子是将帅，游戏结束
+          (when (plist-get (symbol-value (plist-get (symbol-value killed-piece) 'type)) 'is-king) ;; 被吃掉的棋子是将帅，游戏结束
               (progn
                 (plist-put chess-cn--playing 'chess-cn--game-over t) 
-                (message (format "对弈结束, %s胜出." (plist-get (symbol-value (plist-get kill-piece 'side)) 'name)))))))
+                (message (format "对弈结束, %s胜出." (plist-get (symbol-value (plist-get (symbol-value kill-piece) 'side)) 'name)))))))
     (message "违反吃子规则")))
 
 (defun chess-cn--allow-side-p (side)
@@ -473,10 +473,10 @@
         (let ((piece-at-point (chess-cn--get-piece-from-situation cord)))
           (if (plist-get chess-cn--playing 'chess-cn--curt-selected-cord)  ;; 当前选子非空
               (if piece-at-point ;; 光标处有棋子
-                  (if (chess-cn--allow-side-p (plist-get piece-at-point 'side)) (chess-cn--select-piece cord) (chess-cn--kill-piece (plist-get chess-cn--playing 'chess-cn--curt-selected-cord) cord))
+                  (if (chess-cn--allow-side-p (plist-get (symbol-value piece-at-point) 'side)) (chess-cn--select-piece cord) (chess-cn--kill-piece (plist-get chess-cn--playing 'chess-cn--curt-selected-cord) cord))
                 (chess-cn--move-piece (plist-get chess-cn--playing 'chess-cn--curt-selected-cord) cord))
             (if piece-at-point
-                (if (chess-cn--allow-side-p (plist-get piece-at-point 'side)) (chess-cn--select-piece cord) (message "无效棋步,当前应对方走子."))
+                (if (chess-cn--allow-side-p (plist-get (symbol-value piece-at-point) 'side)) (chess-cn--select-piece cord) (message "无效棋步,当前应对方走子."))
               (message "无效棋步，当前未选择棋子且目标位置处无棋子."))
             ))
       (message "落子位置无效"))
@@ -576,7 +576,7 @@
   (and
    (chess-cn--range-between-p 3 5 (car dstcord) t t) ;; 不能离开九宫格
    (if
-     (eq 'chess-cn--side-red (plist-get (chess-cn--get-piece-from-situation oldcord) 'side))
+     (eq 'chess-cn--side-red (plist-get (symbol-value (chess-cn--get-piece-from-situation oldcord)) 'side))
      (chess-cn--range-between-p 7 9 (cdr dstcord) t t)
      (chess-cn--range-between-p 0 2 (cdr dstcord) t t))
    (equal 1 (+ (abs (- (car oldcord) (car dstcord))) (abs (- (cdr oldcord) (cdr dstcord))))))) ;; 只能单步走
@@ -591,7 +591,7 @@
   (and
    (chess-cn--range-between-p 3 5 (car dstcord) t t) ;; 不能离开九宫格
    (if
-     (eq 'chess-cn--side-red (plist-get (chess-cn--get-piece-from-situation oldcord) 'side))
+     (eq 'chess-cn--side-red (plist-get (symbol-value (chess-cn--get-piece-from-situation oldcord)) 'side))
      (chess-cn--range-between-p 7 9 (cdr dstcord) t t)
      (chess-cn--range-between-p 0 2 (cdr dstcord) t t))
    (equal 1 (abs (- (car oldcord) (car dstcord))))
@@ -608,7 +608,7 @@
     (equal 2 (abs (- (car oldcord) (car dstcord))))
     (equal 2 (abs (- (cdr oldcord) (cdr dstcord)))))
    (not (chess-cn--get-piece-from-situation (cons (/ (+ (car oldcord) (car dstcord)) 2) (/ (+ (cdr oldcord) (cdr dstcord)) 2)))) ;; 未填心
-   (if (eq 'chess-cn--side-red (plist-get (chess-cn--get-piece-from-situation oldcord) 'side)) ;; 不可过河
+   (if (eq 'chess-cn--side-red (plist-get (symbol-value (chess-cn--get-piece-from-situation oldcord)) 'side)) ;; 不可过河
        (chess-cn--range-between-p 5 9 (cdr dstcord) t t)
      (chess-cn--range-between-p 0 4 (cdr dstcord) t t))))
 
@@ -619,7 +619,7 @@
 (defun chess-cn--move-rule-bingzu (oldcord dstcord situation)
   "兵卒走子规则"
   (if
-     (eq 'chess-cn--side-red (plist-get (chess-cn--get-piece-from-situation oldcord) 'side))
+     (eq 'chess-cn--side-red (plist-get (symbol-value (chess-cn--get-piece-from-situation oldcord)) 'side))
       (or
           (and ;; 前进
            (equal (car oldcord) (car dstcord))
