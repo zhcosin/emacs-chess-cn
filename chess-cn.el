@@ -163,48 +163,41 @@
 (defconst chess-piece-type-jiangshuai '(name (side-blue "將" side-red "帥") move-rule chess-move-rule-jiangshuai kill-rule chess-kill-rule-jiangshuai is-king t) "")
 
 ;; 蓝方棋子
-(defvar chess-piece-blue-jiang '(side side-blue type chess-piece-type-jiangshuai) "蓝将")
-(defvar chess-piece-blue-xiang-1 '(side side-blue type chess-piece-type-xiang) "蓝象1")
-(defvar chess-piece-blue-xiang-2 '(side side-blue type chess-piece-type-xiang) "蓝象2")
-(defvar chess-piece-blue-shi-1 '(side side-blue type chess-piece-type-shi) "蓝士1")
-(defvar chess-piece-blue-shi-2 '(side side-blue type chess-piece-type-shi) "蓝士2")
-(defvar chess-piece-blue-ju-1 '(side side-blue type chess-piece-type-ju) "蓝车1")
-(defvar chess-piece-blue-ju-2 '(side side-blue type chess-piece-type-ju) "蓝车2")
-(defvar chess-piece-blue-ma-1 '(side side-blue type chess-piece-type-ma) "蓝马1")
-(defvar chess-piece-blue-ma-2 '(side side-blue type chess-piece-type-ma) "蓝马2")
-(defvar chess-piece-blue-pao-1 '(side side-blue type chess-piece-type-pao) "蓝炮1")
-(defvar chess-piece-blue-pao-2 '(side side-blue type chess-piece-type-pao) "蓝炮2")
-(defvar chess-piece-blue-zu-1 '(side side-blue type chess-piece-type-bingzu) "蓝卒1")
-(defvar chess-piece-blue-zu-2 '(side side-blue type chess-piece-type-bingzu) "蓝卒2")
-(defvar chess-piece-blue-zu-3 '(side side-blue type chess-piece-type-bingzu) "蓝卒3")
-(defvar chess-piece-blue-zu-4 '(side side-blue type chess-piece-type-bingzu) "蓝卒4")
-(defvar chess-piece-blue-zu-5 '(side side-blue type chess-piece-type-bingzu) "蓝卒5")
+(defconst chess-piece-blue-jiang '(side side-blue type chess-piece-type-jiangshuai) "蓝将")
+(defconst chess-piece-blue-xiang-1 '(side side-blue type chess-piece-type-xiang) "蓝象1")
+(defconst chess-piece-blue-xiang-2 '(side side-blue type chess-piece-type-xiang) "蓝象2")
+(defconst chess-piece-blue-shi-1 '(side side-blue type chess-piece-type-shi) "蓝士1")
+(defconst chess-piece-blue-shi-2 '(side side-blue type chess-piece-type-shi) "蓝士2")
+(defconst chess-piece-blue-ju-1 '(side side-blue type chess-piece-type-ju) "蓝车1")
+(defconst chess-piece-blue-ju-2 '(side side-blue type chess-piece-type-ju) "蓝车2")
+(defconst chess-piece-blue-ma-1 '(side side-blue type chess-piece-type-ma) "蓝马1")
+(defconst chess-piece-blue-ma-2 '(side side-blue type chess-piece-type-ma) "蓝马2")
+(defconst chess-piece-blue-pao-1 '(side side-blue type chess-piece-type-pao) "蓝炮1")
+(defconst chess-piece-blue-pao-2 '(side side-blue type chess-piece-type-pao) "蓝炮2")
+(defconst chess-piece-blue-zu-1 '(side side-blue type chess-piece-type-bingzu) "蓝卒1")
+(defconst chess-piece-blue-zu-2 '(side side-blue type chess-piece-type-bingzu) "蓝卒2")
+(defconst chess-piece-blue-zu-3 '(side side-blue type chess-piece-type-bingzu) "蓝卒3")
+(defconst chess-piece-blue-zu-4 '(side side-blue type chess-piece-type-bingzu) "蓝卒4")
+(defconst chess-piece-blue-zu-5 '(side side-blue type chess-piece-type-bingzu) "蓝卒5")
 
 ;; 红方棋子
-(defvar chess-piece-red-shuai '(side side-red type chess-piece-type-jiangshuai) "红将")
-(defvar chess-piece-red-xiang-1 '(side side-red type chess-piece-type-xiang) "红象1")
-(defvar chess-piece-red-xiang-2 '(side side-red type chess-piece-type-xiang) "红象2")
-(defvar chess-piece-red-shi-1 '(side side-red type chess-piece-type-shi) "红士1")
-(defvar chess-piece-red-shi-2 '(side side-red type chess-piece-type-shi) "红士2")
-(defvar chess-piece-red-ju-1 '(side side-red type chess-piece-type-ju) "红车1")
-(defvar chess-piece-red-ju-2 '(side side-red type chess-piece-type-ju) "红车2")
-(defvar chess-piece-red-ma-1 '(side side-red type chess-piece-type-ma) "红马1")
-(defvar chess-piece-red-ma-2 '(side side-red type chess-piece-type-ma) "红马2")
-(defvar chess-piece-red-pao-1 '(side side-red type chess-piece-type-pao) "红炮1")
-(defvar chess-piece-red-pao-2 '(side side-red type chess-piece-type-pao) "红炮2")
-(defvar chess-piece-red-bing-1 '(side side-red type chess-piece-type-bingzu) "红卒1")
-(defvar chess-piece-red-bing-2 '(side side-red type chess-piece-type-bingzu) "红卒2")
-(defvar chess-piece-red-bing-3 '(side side-red type chess-piece-type-bingzu) "红卒3")
-(defvar chess-piece-red-bing-4 '(side side-red type chess-piece-type-bingzu) "红卒4")
-(defvar chess-piece-red-bing-5 '(side side-red type chess-piece-type-bingzu) "红卒5")
+(defconst chess-piece-red-shuai '(side side-red type chess-piece-type-jiangshuai) "红将")
+(defconst chess-piece-red-xiang-1 '(side side-red type chess-piece-type-xiang) "红象1")
+(defconst chess-piece-red-xiang-2 '(side side-red type chess-piece-type-xiang) "红象2")
+(defconst chess-piece-red-shi-1 '(side side-red type chess-piece-type-shi) "红士1")
+(defconst chess-piece-red-shi-2 '(side side-red type chess-piece-type-shi) "红士2")
+(defconst chess-piece-red-ju-1 '(side side-red type chess-piece-type-ju) "红车1")
+(defconst chess-piece-red-ju-2 '(side side-red type chess-piece-type-ju) "红车2")
+(defconst chess-piece-red-ma-1 '(side side-red type chess-piece-type-ma) "红马1")
+(defconst chess-piece-red-ma-2 '(side side-red type chess-piece-type-ma) "红马2")
+(defconst chess-piece-red-pao-1 '(side side-red type chess-piece-type-pao) "红炮1")
+(defconst chess-piece-red-pao-2 '(side side-red type chess-piece-type-pao) "红炮2")
+(defconst chess-piece-red-bing-1 '(side side-red type chess-piece-type-bingzu) "红卒1")
+(defconst chess-piece-red-bing-2 '(side side-red type chess-piece-type-bingzu) "红卒2")
+(defconst chess-piece-red-bing-3 '(side side-red type chess-piece-type-bingzu) "红卒3")
+(defconst chess-piece-red-bing-4 '(side side-red type chess-piece-type-bingzu) "红卒4")
+(defconst chess-piece-red-bing-5 '(side side-red type chess-piece-type-bingzu) "红卒5")
 
-
-
-(defvar chess-curt-selected-cord nil "当前所选择的棋子坐标")
-(defvar chess-curt-side nil "当前走子对弈方")
-(defvar chess-game-over nil "对弈是否已得出胜负")
-;; 棋局
-(defvar chess-situation nil "棋局,10x9二维矩阵，元素为棋子")
 (defconst chess-init-situation
   (list 
    (list chess-piece-blue-ju-1 chess-piece-blue-ma-1 chess-piece-blue-xiang-1 chess-piece-blue-shi-1 chess-piece-blue-jiang chess-piece-blue-shi-2 chess-piece-blue-xiang-2 chess-piece-blue-ma-2 chess-piece-blue-ju-2)
@@ -220,6 +213,14 @@
    )
   "初始棋局")
 
+(defvar chess-playing '(chess-game-over nil chess-curt-side nil chess-curt-selected-cord nil chess-situation nil)
+  "对弈信息，包括对弈是否已结束、当前走子方、当前所选棋子的坐标、当前棋局(10x9二维棋子矩阵)")
+(defun chess-playing-init ()
+  "对弈信息初始化"
+  (plist-put chess-playing 'chess-game-over nil)
+  (plist-put chess-playing 'chess-situation (chess-copy-init-situation chess-init-situation)) ;; 初始棋局
+  (plist-put chess-playing 'chess-curt-side nil)
+  (plist-put chess-playing 'chess-curt-selected-cord nil))
 
 (defun get-side-of-chess-piece (chess-piece)
   "获取棋子的对弈方信息"
@@ -329,38 +330,11 @@
   (font-lock-mode 1)
   (insert chess-banner)
   (set-marker board-start (point)) ;; 棋盘开始位置标记
-  ;;(insert chess-init)
   (insert "\n")
   (set-marker board-end (point)) ;; 棋盘结束位置标记
-  ;;(draw-chess-board chess-init-situation)
-  (setq chess-situation (chess-copy-init-situation chess-init-situation)) ;; 初始棋局
-  (setq chess-curt-side nil)
-  (setq chess-curt-selected-cord nil)
-
-  (draw-chess-board-by-situation chess-situation)
-  (chess-move-point-to '(0 . 0))
-  ;;(setq buffer-read-only t)
-  ;;(princ board-start)
-  ;;(princ board-end)
-  ;;(setq chess-situation chess-init-situation)
-  ;;(message (format "board start at %d and end at %d" (marker-position board-start) (marker-position board-end)))
-  ;;(princ-list (get-board-pos 0))
-  ;;(princ board-end)
-  ;;(princ (cons board-start board-end))
-  ;;(princ (position-to-coordinate 148))
-  ;;(princ (position-to-coordinate (coordinate-to-position '(4 5))))
-  ;;(princ (coordinate-to-position (position-to-coordinate (+ 1051 board-start))))
-  ;;(princ board-start)
-  ;;(message "board start at %d, end at %d" (marker-position board-start) (marker-position board-end))
-  ;;(delete-region board-start (1- board-end))
-  ;;(goto-char board-start)
-  ;;(insert "abcdefg")
-  ;;(princ board-start)
-  ;;(princ board-end)
-  ;;(princ (position-to-coordinate 1655))
-  ;;(princ (position-to-coordinate 1279))
-  ;;(princ (coordinate-to-position '(1 . 7)))
-  )
+  (chess-playing-init) ;; 对弈信息初始化
+  (draw-chess-board-by-situation (plist-get chess-playing 'chess-situation)) ;; 绘制棋盘
+  (chess-move-point-to '(0 . 0))) ;; 初始化光标位置
 
 
 ;; 缓冲区位置转换为棋盘坐标
@@ -390,9 +364,9 @@
        (>= (cdr cord) 0)
        (<= (cdr cord) 9)
        (let ((row 0) (col 0) (pos board-start))
-         (let ((board-at-row (nth row chess-situation)))
+         (let ((board-at-row (nth row (plist-get chess-playing 'chess-situation))))
            (while (< row (cdr cord))
-             (setq board-at-row (nth row chess-situation))
+             (setq board-at-row (nth row (plist-get chess-playing 'chess-situation)))
              (setq pos (+ pos grid-offset)) ;; 棋盘左侧偏移
              (while (< col 9)
                ;; 若 (col . row) 处有棋子，则增加 grid-width - 1 个位置，否则 增加 grid-width 个位置
@@ -403,7 +377,7 @@
              (setq pos (+ pos (* (1- grid-high) (+ 3 (* grid-width 8))))) ;; 棋盘方格高度产生的纯字符行，加上末尾的棋子位置(2个字符)和1个换行符.
              (setq row (1+ row))
              (setq col 0))
-           (setq board-at-row (nth row chess-situation))
+           (setq board-at-row (nth row (plist-get chess-playing 'chess-situation)))
            (setq pos (+ pos grid-offset)) ;; 棋盘左侧偏移
            (while (< col (car cord))
                ;; 若 (col . row) 处有棋子，则增加 grid-width - 1 个位置，否则 增加 grid-width 个位置
@@ -414,18 +388,11 @@
 
 (define-derived-mode chinese-chess-mode special-mode "Chinese-Chess"
   "中国象棋主模式"
-  (make-local-variable 'chess-situation)
-  (make-local-variable 'chess-curt-selected-cord)
-  (make-local-variable 'chess-curt-side)
-  (make-local-variable 'chess-game-over)
-  ;;(setq-local glocal-hl-line-mode -1)
-  ;;(define-key chinese-chess-mode-map (kbd "SPC")
-    ;;(lambda () (interactive) (message "按下了空格键")))
+  (make-local-variable 'chess-playing)
   (define-key chinese-chess-mode-map (kbd "<up>") 'chess-move-point-up)
   (define-key chinese-chess-mode-map (kbd "<down>") 'chess-move-point-down)
   (define-key chinese-chess-mode-map (kbd "<left>") 'chess-move-point-left)
-  (define-key chinese-chess-mode-map (kbd "<right>") 'chess-move-point-right)
-  )
+  (define-key chinese-chess-mode-map (kbd "<right>") 'chess-move-point-right))
 
 (add-hook 'chinese-chess-mode-hook (lambda () (setq-local global-hl-line-mode nil)))
 
@@ -446,11 +413,11 @@
 
 (defun chess-get-piece-from-situation (cord)
   "根据坐标获取棋局上的棋子"
-  (when cord (nth (car cord) (nth (cdr cord) chess-situation))))
+  (when cord (nth (car cord) (nth (cdr cord) (plist-get chess-playing 'chess-situation)))))
 
 (defun chess-set-piece-to-situation (cord piece)
   "根据坐标设置棋子"
-  (setf (nth (car cord) (nth (cdr cord) chess-situation)) piece))
+  (setf (nth (car cord) (nth (cdr cord) (plist-get chess-playing 'chess-situation))) piece))
 
 (defun chess-get-other-side (side)
   "获取对弈对方"
@@ -458,9 +425,8 @@
 
 (defun chess-select-piece (cord)
   "选择棋子, 更新当前所选棋子，并将允许走子方设为所选棋子所属方(以应对棋局首步棋)"
-  ;;(message (format "select piece %s, origin selected: %s." cord chess-curt-selected-cord))
-  (setq chess-curt-selected-cord cord)
-  (setq chess-curt-side (plist-get (chess-get-piece-from-situation cord) 'side))
+  (plist-put chess-playing 'chess-curt-selected-cord cord)
+  (plist-put chess-playing 'chess-curt-side (plist-get (chess-get-piece-from-situation cord) 'side))
   (chess-step-debug))
 
 ;; 走子
@@ -475,12 +441,12 @@
         (plist-get (symbol-value (plist-get (chess-get-piece-from-situation oldcord) 'type)) 'move-rule)
         oldcord
         dstcord
-        chess-situation))
+        (plist-get chess-playing 'chess-situation)))
       (progn
           (chess-set-piece-to-situation dstcord (chess-get-piece-from-situation oldcord))
           (chess-set-piece-to-situation oldcord nil)
-          (setq chess-curt-selected-cord nil)
-          (setq chess-curt-side (chess-get-other-side chess-curt-side)))
+          (plist-put chess-playing 'chess-curt-selected-cord nil)
+          (plist-put chess-playing 'chess-curt-side (chess-get-other-side (plist-get chess-playing 'chess-curt-side))))
     (message "违反走子规则")))
 
 (defun chess-kill-piece (oldcord dstcord)
@@ -493,29 +459,29 @@
         (plist-get (symbol-value (plist-get (chess-get-piece-from-situation oldcord) 'type)) 'kill-rule)
         oldcord
         dstcord
-        chess-situation))
+        (plist-get chess-playing 'chess-situation)))
       (progn
         (let ((killed-piece (chess-get-piece-from-situation dstcord))
               (kill-piece (chess-get-piece-from-situation oldcord)))
           (message (format "%s 被吃掉." killed-piece))
           (chess-set-piece-to-situation dstcord kill-piece)
           (chess-set-piece-to-situation oldcord nil)
-          (setq chess-curt-selected-cord nil)
-          (setq chess-curt-side (chess-get-other-side chess-curt-side))
+          (plist-put chess-playing 'chess-curt-selected-cord nil)
+          (plist-put chess-playing 'chess-curt-side (chess-get-other-side (plist-get chess-playing 'chess-curt-side)))
           (when (plist-get (symbol-value (plist-get killed-piece 'type)) 'is-king) ;; 被吃掉的棋子是将帅，游戏结束
               (progn
-                (setq chess-game-over t) 
+                (plist-put chess-playing 'chess-game-over t) 
                 (message (format "游戏结束, %s胜出." (plist-get (symbol-value (plist-get kill-piece 'side)) 'name)))))))
     (message "违反吃子规则")))
 
 (defun chess-allow-side-p (side)
   "是否为允许走子方"
-  (or (null chess-curt-side) (eq chess-curt-side side)))
+  (or (null (plist-get chess-playing 'chess-curt-side)) (eq (plist-get chess-playing 'chess-curt-side) side)))
 
 (defun chess-step-cmd ()
   "走子棋步命令"
   (interactive)
-  (if chess-game-over
+  (if (plist-get chess-playing 'chess-game-over)
       (message "对弈已结束")
     (chess-step)))
 
@@ -525,16 +491,16 @@
         ;;(message (format "落子位置 %s, 落子处棋子 %s，当前选子位置 %s，当前选子 %s." cord (chess-get-piece-from-situation cord) chess-curt-selected-cord (chess-get-piece-from-situation chess-curt-selected-cord)))
     (if cord
         (let ((piece-at-point (chess-get-piece-from-situation cord)))
-          (if chess-curt-selected-cord  ;; 当前选子非空
+          (if (plist-get chess-playing 'chess-curt-selected-cord)  ;; 当前选子非空
               (if piece-at-point ;; 光标处有棋子
-                  (if (chess-allow-side-p (plist-get piece-at-point 'side)) (chess-select-piece cord) (chess-kill-piece chess-curt-selected-cord cord))
-                (chess-move-piece chess-curt-selected-cord cord))
+                  (if (chess-allow-side-p (plist-get piece-at-point 'side)) (chess-select-piece cord) (chess-kill-piece (plist-get chess-playing 'chess-curt-selected-cord) cord))
+                (chess-move-piece (plist-get chess-playing 'chess-curt-selected-cord) cord))
             (if piece-at-point
                 (if (chess-allow-side-p (plist-get piece-at-point 'side)) (chess-select-piece cord) (message "无效棋步,当前应对方走子."))
               (message "无效棋步，当前未选择棋子且目标位置处无棋子."))
             ))
       (message "落子位置无效"))
-    (draw-chess-board-by-situation chess-situation) ;; 重新绘制棋盘
+    (draw-chess-board-by-situation (plist-get chess-playing 'chess-situation)) ;; 重新绘制棋盘
     ;;(message (format "move point to %s" (coordinate-to-position cord)))
     (goto-char (coordinate-to-position cord)) ;; 移动光标到落子位置(有coordinate-to-position 有bug)
     )) 
@@ -542,7 +508,7 @@
 (defun chess-step-debug ()
   "棋步调试"
   (interactive)
-  (message (format "当前走子方: %s, 当前选子: %s" chess-curt-side chess-curt-selected-cord)))
+  (message (format "当前走子方: %s, 当前选子: %s" (plist-get chess-playing 'chess-curt-side) (plist-get chess-playing 'chess-curt-selected-cord))))
 
 ;; {{{ rule
 
