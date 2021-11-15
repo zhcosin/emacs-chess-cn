@@ -347,6 +347,8 @@
   (plist-put chess-cn--playing 'chess-cn--curt-side nil)
   (plist-put chess-cn--playing 'chess-cn--curt-selected-cord nil))
 
+(defvar chess-cn--saved-dir "~/.chess" "保存棋局时默认目录")
+
 (defun chess-cn--get-side-of-piece (chess-cn--piece)
   "获取棋子的对弈方信息"
   (chess-cn--get-side-by-flag (plist-get (symbol-value chess-cn--piece) 'side)))
@@ -689,7 +691,11 @@
 (defun chess-cn--save ()
   "保存棋局"
   (interactive)
-  (write-region (format "%s" chess-cn--playing) nil "~/aaa.chess"))
+  (unless (file-directory-p chess-cn--saved-dir)
+    (make-directory chess-cn--saved-dir t))
+  (let ((now-decoded (decode-time (current-time))))
+    (write-region (format "%s" chess-cn--playing) nil
+                  (concat (file-name-as-directory chess-cn--saved-dir) (format-time-string "%Y-%m-%dT%H%M%S.chess")))))
 
 
 (provide 'chess-cn)
