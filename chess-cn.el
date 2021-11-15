@@ -686,6 +686,11 @@
   (chess-cn--draw-board-by-situation (plist-get chess-cn--playing 'chess-cn--situation)) ;; 绘制棋盘
   (chess-cn--move-point-to '(0 . 0))) ;; 初始化光标位置
 
+(defun chess-cn--save ()
+  "保存棋局"
+  (interactive)
+  (write-region (format "%s" chess-cn--playing) nil "~/aaa.chess"))
+
 
 (provide 'chess-cn)
 
