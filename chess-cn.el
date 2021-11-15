@@ -92,29 +92,17 @@
 
 ;;; }}}
 
+;; {{{ 字符界面表示层
 
-;; 缓冲区名称
-(defconst chess-buffer-name "*cn-chess*")
-
-;; 棋盘起止位置标记
-(defvar board-start (make-marker)) 
-(defvar board-end (make-marker)) 
-
-;; 对弈双方
-(defconst side-blue '(name "蓝方" style (:background "blue")))
-(defconst side-red '(name "红方" style (:background "red")))
-(defun get-side-by-flag (flag)
-  "根据对局方标识获取对局方信息"
-  (symbol-value flag))
-
-
-(defconst regexp-cn "[^\x00-\xff]" "中文字符正则串")
+(defconst chess-banner "\n\n                             中国象棋        \n\n\n" "banner")
 
 (defconst grid-width 6 "棋盘小方格宽度字符数")
 (defconst grid-high 3 "棋盘小方格高度字符数")
 (defconst grid-offset 8 "棋盘距左边界起始列号")
 
-
+;; 棋盘起止位置标记
+(defvar board-start (make-marker)) 
+(defvar board-end (make-marker)) 
 
 
 
@@ -150,7 +138,143 @@
 "
 "棋盘")
 
+;; 缓冲区位置转换为棋盘坐标
+(defun position-to-coordinate (pos)
+  (and (>= pos board-start)
+       (< pos board-end)
+       (save-excursion
+         (let ((row 0)
+               (col 0))
+           (goto-char board-start)
+           (forward-char grid-offset)
+           (while (< (point) pos)
+             (forward-char)
+             (setq col (1+ col))
+             (unless (and (> (char-before) ?\x00) (< (char-before) ?\xff)) ;; 一个中文字符占据两个英文字符的位置
+               (setq col (1+ col)))
+             (when (char-equal (char-before) ?\n)
+               (forward-char grid-offset)
+               (setq row (1+ row))
+               (setq col 0)))
+           (cons (/ col grid-width) (/ row grid-high))))))
 
+;; 棋盘坐标转换为缓冲区位置
+(defun coordinate-to-position (cord)
+  (and (>= (car cord) 0)
+       (<= (car cord) 8)
+       (>= (cdr cord) 0)
+       (<= (cdr cord) 9)
+       (let ((row 0) (col 0) (pos board-start))
+         (let ((board-at-row (nth row (plist-get chess-playing 'chess-situation))))
+           (while (< row (cdr cord))
+             (setq board-at-row (nth row (plist-get chess-playing 'chess-situation)))
+             (setq pos (+ pos grid-offset)) ;; 棋盘左侧偏移
+             (while (< col 9)
+               ;; 若 (col . row) 处有棋子，则增加 grid-width - 1 个位置，否则 增加 grid-width 个位置
+               (setq pos (+ pos (if (null (nth col board-at-row)) (if (= col 8) 2 grid-width) (if (= col 8) 1 (1- grid-width)))))
+               (setq col (1+ col)))  
+             (setq pos (1+ pos))  ;; 换行符占据一个位置
+             (setq pos (+ pos (* grid-offset (1- grid-high)))) ;; 棋盘左侧偏移(棋盘方格调试纯字符行)
+             (setq pos (+ pos (* (1- grid-high) (+ 3 (* grid-width 8))))) ;; 棋盘方格高度产生的纯字符行，加上末尾的棋子位置(2个字符)和1个换行符.
+             (setq row (1+ row))
+             (setq col 0))
+           (setq board-at-row (nth row (plist-get chess-playing 'chess-situation)))
+           (setq pos (+ pos grid-offset)) ;; 棋盘左侧偏移
+           (while (< col (car cord))
+               ;; 若 (col . row) 处有棋子，则增加 grid-width - 1 个位置，否则 增加 grid-width 个位置
+               (setq pos (+ pos (if (null (nth col board-at-row)) (if (= col 8) 2 grid-width) (if (= col 8) 1 (1- grid-width)))))
+               (setq col (1+ col)))
+           )
+         pos)))
+
+
+(defun draw-chess-situation (the-situation)
+  "绘制棋局"
+  (setq buffer-read-only nil)
+  (delete-region board-start (1- board-end))
+  (goto-char board-start)
+  (while the-situation
+    (insert (make-string grid-offset ? ))
+    (let ((row-situation (car the-situation)))
+      (while row-situation
+        (let* ((curt-piece (car row-situation))
+              (with-piece (not (null curt-piece)))
+              (is-tail (null (cdr row-situation)))
+              )
+          (insert
+           (cond
+            ((and with-piece (not is-tail)) ;; 当前位置有棋子且不在行尾
+             ;;(message "有，no")
+             (concat (propertize (get-chess-piece-name curt-piece) 'font-lock-face (chess-get-piece-face curt-piece))
+                     (make-string (- grid-width 2) ?-)))
+            ((and with-piece is-tail) ;; 当前位置有棋子且在行尾
+             ;;(message "有，yes")
+             (concat (propertize (get-chess-piece-name curt-piece) 'font-lock-face (chess-get-piece-face curt-piece)) "\n"))
+            ((and (not with-piece) (not is-tail)) ;; 当前位置无棋子且不在行尾
+             ;;(message "无，no")
+             (concat "+" (make-string (1- grid-width) ?-)))
+            ((and (not with-piece) is-tail) ;; 当前位置无棋子且在行尾
+             ;;(message "无，yes")
+             "+ \n"))))
+        (setq row-situation (cdr row-situation)) ;; 切换下一个棋子
+        ))
+    (when (cdr the-situation) ;; 棋局还有下一行，则插入中间文本行
+      (insert ;; 棋局换行
+       (scale-string
+        (concat
+          (make-string grid-offset ? )
+          (scale-string (concat "|" (make-string (1- grid-width) ? )) 8)
+          "| \n")
+        (1- grid-high))))
+    (setq the-situation (cdr the-situation)))
+  (setq buffer-read-only t)) ;; 切换棋局下一行
+
+(defun chess-put-piece-to-board (row-situation board-row-str)
+  "将棋局的一行输出到棋盘上的一行上"
+  (let* ((board-row-str-len (length board-row-str))
+             (max-width (if (< grid-width board-row-str-len) grid-width board-row-str-len)))
+    (if row-situation
+        (concat
+         (if
+           (car row-situation) ;; 有棋子
+           (concat
+             (propertize (get-chess-piece-name (car row-situation)) 'font-lock-face (chess-get-piece-face (car row-situation)))
+             (substring board-row-str 2 max-width))
+           (substring board-row-str 0 max-width))
+         (chess-put-piece-to-board (cdr row-situation) (substring board-row-str max-width)))
+      board-row-str)))
+
+(defun chess-draw-board-by-situation (the-situation)
+  "将棋局输出到棋盘"
+  (setq buffer-read-only nil)
+  (delete-region board-start (1- board-end))
+  (goto-char board-start)
+  (let ((i 0)
+        (board-arr (split-string chess-board "\n")))
+    (while (< i (length board-arr))
+      (insert (concat (make-string grid-offset ? )
+                      (if (= 0 (% i 3))
+          (chess-put-piece-to-board (nth (/ i 3) the-situation) (nth i board-arr))
+        (nth i board-arr)) "\n"))
+      (setq i (1+ i))))
+  (setq buffer-read-only t))
+
+;;; }}} 字符界面表示层
+
+;;; {{{ 内核框架
+;; 缓冲区名称
+(defconst chess-buffer-name "*cn-chess*")
+
+;; 对弈双方
+(defconst side-blue '(name "蓝方" style (:background "blue")))
+(defconst side-red '(name "红方" style (:background "red")))
+
+(defun chess-get-side-by-flag (flag)
+  "根据对局方标识获取对局方信息"
+  (symbol-value flag))
+
+
+(defconst regexp-cn "[^\x00-\xff]" "中文字符正则串")
 
 
 ;; 兵种
@@ -224,7 +348,7 @@
 
 (defun get-side-of-chess-piece (chess-piece)
   "获取棋子的对弈方信息"
-  (get-side-by-flag (plist-get chess-piece 'side)))
+  (chess-get-side-by-flag (plist-get chess-piece 'side)))
 
 (defun get-chess-piece-name (chess-piece)
   "获取棋子名称"
@@ -232,85 +356,11 @@
 
 
 
-(defun get-chess-piece-face (chess-piece)
+(defun chess-get-piece-face (chess-piece)
   "获取棋子用于显示的文本属性"
   (plist-get (symbol-value (plist-get chess-piece 'side)) 'style)
   )
 
-
-(defun draw-chess-situation (the-situation)
-  "绘制棋局"
-  (setq buffer-read-only nil)
-  (delete-region board-start (1- board-end))
-  (goto-char board-start)
-  (while the-situation
-    (insert (make-string grid-offset ? ))
-    (let ((row-situation (car the-situation)))
-      (while row-situation
-        (let* ((curt-piece (car row-situation))
-              (with-piece (not (null curt-piece)))
-              (is-tail (null (cdr row-situation)))
-              )
-          (insert
-           (cond
-            ((and with-piece (not is-tail)) ;; 当前位置有棋子且不在行尾
-             ;;(message "有，no")
-             (concat (propertize (get-chess-piece-name curt-piece) 'font-lock-face (get-chess-piece-face curt-piece))
-                     (make-string (- grid-width 2) ?-)))
-            ((and with-piece is-tail) ;; 当前位置有棋子且在行尾
-             ;;(message "有，yes")
-             (concat (propertize (get-chess-piece-name curt-piece) 'font-lock-face (get-chess-piece-face curt-piece)) "\n"))
-            ((and (not with-piece) (not is-tail)) ;; 当前位置无棋子且不在行尾
-             ;;(message "无，no")
-             (concat "+" (make-string (1- grid-width) ?-)))
-            ((and (not with-piece) is-tail) ;; 当前位置无棋子且在行尾
-             ;;(message "无，yes")
-             "+ \n"))))
-        (setq row-situation (cdr row-situation)) ;; 切换下一个棋子
-        ))
-    (when (cdr the-situation) ;; 棋局还有下一行，则插入中间文本行
-      (insert ;; 棋局换行
-       (scale-string
-        (concat
-          (make-string grid-offset ? )
-          (scale-string (concat "|" (make-string (1- grid-width) ? )) 8)
-          "| \n")
-        (1- grid-high))))
-    (setq the-situation (cdr the-situation)))
-  (setq buffer-read-only t)) ;; 切换棋局下一行
-
-(defun put-chess-piece-to-board (row-situation board-row-str)
-  "将棋局的一行输出到棋盘上的一行上"
-  (let* ((board-row-str-len (length board-row-str))
-             (max-width (if (< grid-width board-row-str-len) grid-width board-row-str-len)))
-    (if row-situation
-        (concat
-         (if
-           (car row-situation) ;; 有棋子
-           (concat
-             (propertize (get-chess-piece-name (car row-situation)) 'font-lock-face (get-chess-piece-face (car row-situation)))
-             (substring board-row-str 2 max-width))
-           (substring board-row-str 0 max-width))
-         (put-chess-piece-to-board (cdr row-situation) (substring board-row-str max-width)))
-      board-row-str)))
-
-(defun draw-chess-board-by-situation (the-situation)
-  "将棋局输出到棋盘"
-  (setq buffer-read-only nil)
-  (delete-region board-start (1- board-end))
-  (goto-char board-start)
-  (let ((i 0)
-        (board-arr (split-string chess-board "\n")))
-    (while (< i (length board-arr))
-      (insert (concat (make-string grid-offset ? )
-                      (if (= 0 (% i 3))
-          (put-chess-piece-to-board (nth (/ i 3) the-situation) (nth i board-arr))
-        (nth i board-arr)) "\n"))
-      (setq i (1+ i))))
-  (setq buffer-read-only t))
-
-
-(defconst chess-banner "\n\n                             中国象棋        \n\n\n" "banner")
 
 (defun chess-copy-init-situation (chess-init-situation)
   "深拷贝初始棋局"
@@ -318,73 +368,6 @@
       (cons (copy-list (car chess-init-situation)) (chess-copy-init-situation (cdr chess-init-situation)))
     nil)
   )
-
-
-(defun chess-new ()
-  (interactive)
-  (get-buffer-create chess-buffer-name)
-  (switch-to-buffer chess-buffer-name)
-  (chinese-chess-mode)
-  (setq buffer-read-only nil)
-  (erase-buffer)
-  (font-lock-mode 1)
-  (insert chess-banner)
-  (set-marker board-start (point)) ;; 棋盘开始位置标记
-  (insert "\n")
-  (set-marker board-end (point)) ;; 棋盘结束位置标记
-  (chess-playing-init) ;; 对弈信息初始化
-  (draw-chess-board-by-situation (plist-get chess-playing 'chess-situation)) ;; 绘制棋盘
-  (chess-move-point-to '(0 . 0))) ;; 初始化光标位置
-
-
-;; 缓冲区位置转换为棋盘坐标
-(defun position-to-coordinate (pos)
-  (and (>= pos board-start)
-       (< pos board-end)
-       (save-excursion
-         (let ((row 0)
-               (col 0))
-           (goto-char board-start)
-           (forward-char grid-offset)
-           (while (< (point) pos)
-             (forward-char)
-             (setq col (1+ col))
-             (unless (and (> (char-before) ?\x00) (< (char-before) ?\xff)) ;; 一个中文字符占据两个英文字符的位置
-               (setq col (1+ col)))
-             (when (char-equal (char-before) ?\n)
-               (forward-char grid-offset)
-               (setq row (1+ row))
-               (setq col 0)))
-           (cons (/ col grid-width) (/ row grid-high))))))
-
-;; 棋盘坐标转换为缓冲区位置
-(defun coordinate-to-position (cord)
-  (and (>= (car cord) 0)
-       (<= (car cord) 8)
-       (>= (cdr cord) 0)
-       (<= (cdr cord) 9)
-       (let ((row 0) (col 0) (pos board-start))
-         (let ((board-at-row (nth row (plist-get chess-playing 'chess-situation))))
-           (while (< row (cdr cord))
-             (setq board-at-row (nth row (plist-get chess-playing 'chess-situation)))
-             (setq pos (+ pos grid-offset)) ;; 棋盘左侧偏移
-             (while (< col 9)
-               ;; 若 (col . row) 处有棋子，则增加 grid-width - 1 个位置，否则 增加 grid-width 个位置
-               (setq pos (+ pos (if (null (nth col board-at-row)) (if (= col 8) 2 grid-width) (if (= col 8) 1 (1- grid-width)))))
-               (setq col (1+ col)))  
-             (setq pos (1+ pos))  ;; 换行符占据一个位置
-             (setq pos (+ pos (* grid-offset (1- grid-high)))) ;; 棋盘左侧偏移(棋盘方格调试纯字符行)
-             (setq pos (+ pos (* (1- grid-high) (+ 3 (* grid-width 8))))) ;; 棋盘方格高度产生的纯字符行，加上末尾的棋子位置(2个字符)和1个换行符.
-             (setq row (1+ row))
-             (setq col 0))
-           (setq board-at-row (nth row (plist-get chess-playing 'chess-situation)))
-           (setq pos (+ pos grid-offset)) ;; 棋盘左侧偏移
-           (while (< col (car cord))
-               ;; 若 (col . row) 处有棋子，则增加 grid-width - 1 个位置，否则 增加 grid-width 个位置
-               (setq pos (+ pos (if (null (nth col board-at-row)) (if (= col 8) 2 grid-width) (if (= col 8) 1 (1- grid-width)))))
-               (setq col (1+ col)))
-           )
-         pos)))
 
 (define-derived-mode chinese-chess-mode special-mode "Chinese-Chess"
   "中国象棋主模式"
@@ -500,7 +483,7 @@
               (message "无效棋步，当前未选择棋子且目标位置处无棋子."))
             ))
       (message "落子位置无效"))
-    (draw-chess-board-by-situation (plist-get chess-playing 'chess-situation)) ;; 重新绘制棋盘
+    (chess-draw-board-by-situation (plist-get chess-playing 'chess-situation)) ;; 重新绘制棋盘
     ;;(message (format "move point to %s" (coordinate-to-position cord)))
     (goto-char (coordinate-to-position cord)) ;; 移动光标到落子位置(有coordinate-to-position 有bug)
     )) 
@@ -509,6 +492,8 @@
   "棋步调试"
   (interactive)
   (message (format "当前走子方: %s, 当前选子: %s" (plist-get chess-playing 'chess-curt-side) (plist-get chess-playing 'chess-curt-selected-cord))))
+
+;; }}} 内核框架
 
 ;; {{{ rule
 
@@ -685,6 +670,25 @@
   (chess-move-point-to (chess-coordinate-cycle (position-to-coordinate (point)) 1 0)))
 
 ;; }}}
+
+
+(defun chess-new ()
+  "开启新的对弈"
+  (interactive)
+  (get-buffer-create chess-buffer-name)
+  (switch-to-buffer chess-buffer-name)
+  (chinese-chess-mode)
+  (setq buffer-read-only nil)
+  (erase-buffer)
+  (font-lock-mode 1)
+  (insert chess-banner)
+  (set-marker board-start (point)) ;; 棋盘开始位置标记
+  (insert "\n")
+  (set-marker board-end (point)) ;; 棋盘结束位置标记
+  (chess-playing-init) ;; 对弈信息初始化
+  (chess-draw-board-by-situation (plist-get chess-playing 'chess-situation)) ;; 绘制棋盘
+  (chess-move-point-to '(0 . 0))) ;; 初始化光标位置
+
 
 (provide 'chess-cn)
 
