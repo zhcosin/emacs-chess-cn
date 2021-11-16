@@ -728,19 +728,18 @@
       (plist-put chess-cn--playing 'curt-selected-cord nil)
       (plist-put chess-cn--playing ;; 切换走子方
                  'curt-side
-                 (chess-cn--get-other-side
                   (plist-get
                    (chess-cn--get-piece-value-from-situation
                     (plist-get last-history 'dstcord))
-                   'side)))
+                   'side))
       (chess-cn--set-piece-to-situation
        (plist-get last-history 'oldcord)
        (chess-cn--get-piece-from-situation (plist-get last-history 'dstcord)))
       (chess-cn--set-piece-to-situation
        (plist-get last-history 'dstcord)
        (plist-get last-history 'killed-piece))
-      (chess-cn--draw-board-by-situation (plist-get chess-cn--playing 'situation))) ;; 绘制棋盘
-))
+      (chess-cn--draw-board-by-situation (plist-get chess-cn--playing 'situation)) ;; 绘制棋盘
+        (chess-cn--move-point-to '(0 . 0))))) ;; 初始化光标位置
 
 (defun chess-cn--save ()
   "保存棋局"
