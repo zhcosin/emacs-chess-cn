@@ -25,8 +25,18 @@
    
 * 用法
   
+** 尝试
+
  - 在 emacs 中打开项目中的 chess-cn.el 文件.
  - 执行 eval-buffer 命令加载文件内容.
+  
+** 永久配置 
+   
+配置文件中增加以下两行
+#+BEGIN_SRC elisp
+(add-to-list 'load-path "path/to/chess-cn.el")
+(require 'chess-cn)
+#+END_SRC
 
 
 ** 开新局
