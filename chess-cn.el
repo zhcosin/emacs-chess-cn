@@ -383,7 +383,10 @@
   (define-key chinese-chess-cn--mode-map (kbd "<left>") 'chess-cn--move-point-left)
   (define-key chinese-chess-cn--mode-map (kbd "<right>") 'chess-cn--move-point-right))
 
-(add-hook 'chinese-chess-cn--mode-hook (lambda () (setq-local global-hl-line-mode nil)))
+(add-hook 'chinese-chess-cn--mode-hook
+          (lambda ()
+            (setq-local global-hl-line-mode nil) ;; 关闭主缓冲区当前行高亮
+            (setq-local cursor-type 'box)))      ;; 设置主缓冲区光标为块状
 
 
 ;;(add-to-list 'evil-emacs-state-modes 'chinese-chess-cn--mode)
@@ -441,7 +444,7 @@
           (chess-cn--set-piece-to-situation oldcord nil)
           (plist-put chess-cn--playing 'curt-selected-cord nil)
           (plist-put chess-cn--playing 'curt-side (chess-cn--get-other-side (plist-get chess-cn--playing 'curt-side)))
-          (chess-cn--add-step-history oldcord dstcord nil)) ;; 记录棋步历史
+          (chess-cn--push-history oldcord dstcord nil)) ;; 记录棋步历史
     (message "违反走子规则")))
 
 (defun chess-cn--kill-piece (oldcord dstcord)
@@ -463,18 +466,25 @@
           (chess-cn--set-piece-to-situation oldcord nil)
           (plist-put chess-cn--playing 'curt-selected-cord nil)
           (plist-put chess-cn--playing 'curt-side (chess-cn--get-other-side (plist-get chess-cn--playing 'curt-side)))
-          (chess-cn--add-step-history oldcord dstcord killed-piece) ;; 记录棋步历史
+          (chess-cn--push-history oldcord dstcord killed-piece) ;; 记录棋步历史
           (when (plist-get (symbol-value (plist-get (symbol-value killed-piece) 'type)) 'is-king) ;; 被吃掉的棋子是将帅，游戏结束
               (progn
                 (plist-put chess-cn--playing 'game-over t) 
                 (message (format "对弈结束, %s胜出." (plist-get (symbol-value (plist-get (symbol-value kill-piece) 'side)) 'name)))))))
     (message "违反吃子规则")))
 
-(defun chess-cn--add-step-history (oldcord dstcord killed-piece)
+(defun chess-cn--push-history (oldcord dstcord killed-piece)
   "记录棋步历史,killed-piece 为被吃子(符号)"
   (plist-put chess-cn--playing
              'history
-             (cons (list oldcord dstcord killed-piece) (plist-get chess-cn--playing 'history))))
+             (cons (list 'oldcord oldcord 'dstcord dstcord 'killed-piece killed-piece)
+                   (plist-get chess-cn--playing 'history))))
+
+(defun chess-cn--pop-history ()
+  "去掉最后一步棋步历史并返回最后一步"
+  (let* ((history (plist-get chess-cn--playing 'history)))
+    (plist-put chess-cn--playing 'history (cdr history))
+    (car history)))
 
 (defun chess-cn--allow-side-p (side)
   "是否为允许走子方"
@@ -707,6 +717,30 @@
   (chess-cn--playing-init) ;; 对弈信息初始化
   (chess-cn--draw-board-by-situation (plist-get chess-cn--playing 'situation)) ;; 绘制棋盘
   (chess-cn--move-point-to '(0 . 0))) ;; 初始化光标位置
+
+(defun chess-cn--undo ()
+  "悔棋"
+  (interactive)
+  (let ((last-history (chess-cn--pop-history))) ;; 去掉最后一步历史
+    (if (not last-history)
+        (message "棋步历史栈已空，无法再悔棋.")
+      (plist-put chess-cn--playing 'game-over nil)
+      (plist-put chess-cn--playing 'curt-selected-cord nil)
+      (plist-put chess-cn--playing ;; 切换走子方
+                 'curt-side
+                 (chess-cn--get-other-side
+                  (plist-get
+                   (chess-cn--get-piece-value-from-situation
+                    (plist-get last-history 'dstcord))
+                   'side)))
+      (chess-cn--set-piece-to-situation
+       (plist-get last-history 'oldcord)
+       (chess-cn--get-piece-from-situation (plist-get last-history 'dstcord)))
+      (chess-cn--set-piece-to-situation
+       (plist-get last-history 'dstcord)
+       (plist-get last-history 'killed-piece))
+      (chess-cn--draw-board-by-situation (plist-get chess-cn--playing 'situation))) ;; 绘制棋盘
+))
 
 (defun chess-cn--save ()
   "保存棋局"
