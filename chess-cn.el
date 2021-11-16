@@ -172,9 +172,9 @@
        (>= (cdr cord) 0)
        (<= (cdr cord) 9)
        (let ((row 0) (col 0) (pos chess-cn--board-start))
-         (let ((board-at-row (nth row (plist-get chess-cn--playing 'chess-cn--situation))))
+         (let ((board-at-row (nth row (plist-get chess-cn--playing 'situation))))
            (while (< row (cdr cord))
-             (setq board-at-row (nth row (plist-get chess-cn--playing 'chess-cn--situation)))
+             (setq board-at-row (nth row (plist-get chess-cn--playing 'situation)))
              (setq pos (+ pos chess-cn--board-grid-offsetset)) ;; 棋盘左侧偏移
              (while (< col 9)
                ;; 若 (col . row) 处有棋子，则增加 chess-cn--board-grid-width - 1 个位置，否则 增加 chess-cn--board-grid-width 个位置
@@ -185,7 +185,7 @@
              (setq pos (+ pos (* (1- chess-cn--board-grid-high) (+ 3 (* chess-cn--board-grid-width 8))))) ;; 棋盘方格高度产生的纯字符行，加上末尾的棋子位置(2个字符)和1个换行符.
              (setq row (1+ row))
              (setq col 0))
-           (setq board-at-row (nth row (plist-get chess-cn--playing 'chess-cn--situation)))
+           (setq board-at-row (nth row (plist-get chess-cn--playing 'situation)))
            (setq pos (+ pos chess-cn--board-grid-offsetset)) ;; 棋盘左侧偏移
            (while (< col (car cord))
                ;; 若 (col . row) 处有棋子，则增加 chess-cn--board-grid-width - 1 个位置，否则 增加 chess-cn--board-grid-width 个位置
@@ -345,14 +345,14 @@
    )
   "初始棋局")
 
-(defvar chess-cn--playing '(chess-cn--game-over nil chess-cn--curt-side nil chess-cn--curt-selected-cord nil chess-cn--situation nil)
+(defvar chess-cn--playing '(game-over nil curt-side nil curt-selected-cord nil situation nil history nil)
   "对弈信息，包括对弈是否已结束、当前走子方、当前所选棋子的坐标、当前棋局(10x9二维棋子矩阵)")
 (defun chess-cn--playing-init ()
   "对弈信息初始化"
-  (plist-put chess-cn--playing 'chess-cn--game-over nil)
-  (plist-put chess-cn--playing 'chess-cn--situation (chess-cn--copy-init-situation chess-cn--init-situation)) ;; 初始棋局
-  (plist-put chess-cn--playing 'chess-cn--curt-side nil)
-  (plist-put chess-cn--playing 'chess-cn--curt-selected-cord nil))
+  (plist-put chess-cn--playing 'game-over nil)
+  (plist-put chess-cn--playing 'situation (chess-cn--copy-init-situation chess-cn--init-situation)) ;; 初始棋局
+  (plist-put chess-cn--playing 'curt-side nil)
+  (plist-put chess-cn--playing 'curt-selected-cord nil))
 
 (defvar chess-cn--saved-dir "~/.chess" "保存棋局时默认目录")
 
@@ -401,12 +401,17 @@
 
 
 (defun chess-cn--get-piece-from-situation (cord)
-  "根据坐标获取棋局上的棋子"
-  (when cord (nth (car cord) (nth (cdr cord) (plist-get chess-cn--playing 'chess-cn--situation)))))
+  "根据坐标获取棋局上的棋子(符号)"
+  (when cord (nth (car cord) (nth (cdr cord) (plist-get chess-cn--playing 'situation)))))
+
+(defun chess-cn--get-piece-value-from-situation (cord)
+  "根据坐标获取棋局上的棋子(值)"
+  (let ((piece (chess-cn--get-piece-from-situation cord)))
+    (when piece (symbol-value piece))))
 
 (defun chess-cn--set-piece-to-situation (cord piece)
-  "根据坐标设置棋子"
-  (setf (nth (car cord) (nth (cdr cord) (plist-get chess-cn--playing 'chess-cn--situation))) piece))
+  "根据坐标设置棋子(符号)"
+  (setf (nth (car cord) (nth (cdr cord) (plist-get chess-cn--playing 'situation))) piece))
 
 (defun chess-cn--get-other-side (side)
   "获取对弈对方"
@@ -414,8 +419,8 @@
 
 (defun chess-cn--select-piece (cord)
   "选择棋子, 更新当前所选棋子，并将允许走子方设为所选棋子所属方(以应对棋局首步棋)"
-  (plist-put chess-cn--playing 'chess-cn--curt-selected-cord cord)
-  (plist-put chess-cn--playing 'chess-cn--curt-side (plist-get (symbol-value (chess-cn--get-piece-from-situation cord)) 'side))
+  (plist-put chess-cn--playing 'curt-selected-cord cord)
+  (plist-put chess-cn--playing 'curt-side (plist-get (symbol-value (chess-cn--get-piece-from-situation cord)) 'side))
   (chess-cn--step-debug))
 
 ;; 走子
@@ -430,12 +435,13 @@
         (plist-get (symbol-value (plist-get (symbol-value (chess-cn--get-piece-from-situation oldcord)) 'type)) 'move-rule)
         oldcord
         dstcord
-        (plist-get chess-cn--playing 'chess-cn--situation)))
+        (plist-get chess-cn--playing 'situation)))
       (progn
           (chess-cn--set-piece-to-situation dstcord (chess-cn--get-piece-from-situation oldcord))
           (chess-cn--set-piece-to-situation oldcord nil)
-          (plist-put chess-cn--playing 'chess-cn--curt-selected-cord nil)
-          (plist-put chess-cn--playing 'chess-cn--curt-side (chess-cn--get-other-side (plist-get chess-cn--playing 'chess-cn--curt-side))))
+          (plist-put chess-cn--playing 'curt-selected-cord nil)
+          (plist-put chess-cn--playing 'curt-side (chess-cn--get-other-side (plist-get chess-cn--playing 'curt-side)))
+          (chess-cn--add-step-history oldcord dstcord nil)) ;; 记录棋步历史
     (message "违反走子规则")))
 
 (defun chess-cn--kill-piece (oldcord dstcord)
@@ -448,48 +454,55 @@
         (plist-get (symbol-value (plist-get (symbol-value (chess-cn--get-piece-from-situation oldcord)) 'type)) 'kill-rule)
         oldcord
         dstcord
-        (plist-get chess-cn--playing 'chess-cn--situation)))
+        (plist-get chess-cn--playing 'situation)))
       (progn
         (let ((killed-piece (chess-cn--get-piece-from-situation dstcord))
               (kill-piece (chess-cn--get-piece-from-situation oldcord)))
           (message (format "%s 被吃掉." killed-piece))
           (chess-cn--set-piece-to-situation dstcord kill-piece)
           (chess-cn--set-piece-to-situation oldcord nil)
-          (plist-put chess-cn--playing 'chess-cn--curt-selected-cord nil)
-          (plist-put chess-cn--playing 'chess-cn--curt-side (chess-cn--get-other-side (plist-get chess-cn--playing 'chess-cn--curt-side)))
+          (plist-put chess-cn--playing 'curt-selected-cord nil)
+          (plist-put chess-cn--playing 'curt-side (chess-cn--get-other-side (plist-get chess-cn--playing 'curt-side)))
+          (chess-cn--add-step-history oldcord dstcord killed-piece) ;; 记录棋步历史
           (when (plist-get (symbol-value (plist-get (symbol-value killed-piece) 'type)) 'is-king) ;; 被吃掉的棋子是将帅，游戏结束
               (progn
-                (plist-put chess-cn--playing 'chess-cn--game-over t) 
+                (plist-put chess-cn--playing 'game-over t) 
                 (message (format "对弈结束, %s胜出." (plist-get (symbol-value (plist-get (symbol-value kill-piece) 'side)) 'name)))))))
     (message "违反吃子规则")))
 
+(defun chess-cn--add-step-history (oldcord dstcord killed-piece)
+  "记录棋步历史,killed-piece 为被吃子(符号)"
+  (plist-put chess-cn--playing
+             'history
+             (cons (list oldcord dstcord killed-piece) (plist-get chess-cn--playing 'history))))
+
 (defun chess-cn--allow-side-p (side)
   "是否为允许走子方"
-  (or (null (plist-get chess-cn--playing 'chess-cn--curt-side)) (eq (plist-get chess-cn--playing 'chess-cn--curt-side) side)))
+  (or (null (plist-get chess-cn--playing 'curt-side)) (eq (plist-get chess-cn--playing 'curt-side) side)))
 
 (defun chess-cn--step-cmd ()
   "走子棋步命令"
   (interactive)
-  (if (plist-get chess-cn--playing 'chess-cn--game-over)
+  (if (plist-get chess-cn--playing 'game-over)
       (message "对弈已结束")
     (chess-cn--step)))
 
 (defun chess-cn--step ()
   "走子棋步"
   (let ((cord (chess-cn--position-to-coordinate (point))))
-        ;;(message (format "落子位置 %s, 落子处棋子 %s，当前选子位置 %s，当前选子 %s." cord (chess-cn--get-piece-from-situation cord) chess-cn--curt-selected-cord (chess-cn--get-piece-from-situation chess-cn--curt-selected-cord)))
+        ;;(message (format "落子位置 %s, 落子处棋子 %s，当前选子位置 %s，当前选子 %s." cord (chess-cn--get-piece-from-situation cord) curt-selected-cord (chess-cn--get-piece-from-situation curt-selected-cord)))
     (if cord
         (let ((piece-at-point (chess-cn--get-piece-from-situation cord)))
-          (if (plist-get chess-cn--playing 'chess-cn--curt-selected-cord)  ;; 当前选子非空
+          (if (plist-get chess-cn--playing 'curt-selected-cord)  ;; 当前选子非空
               (if piece-at-point ;; 光标处有棋子
-                  (if (chess-cn--allow-side-p (plist-get (symbol-value piece-at-point) 'side)) (chess-cn--select-piece cord) (chess-cn--kill-piece (plist-get chess-cn--playing 'chess-cn--curt-selected-cord) cord))
-                (chess-cn--move-piece (plist-get chess-cn--playing 'chess-cn--curt-selected-cord) cord))
+                  (if (chess-cn--allow-side-p (plist-get (symbol-value piece-at-point) 'side)) (chess-cn--select-piece cord) (chess-cn--kill-piece (plist-get chess-cn--playing 'curt-selected-cord) cord))
+                (chess-cn--move-piece (plist-get chess-cn--playing 'curt-selected-cord) cord))
             (if piece-at-point
                 (if (chess-cn--allow-side-p (plist-get (symbol-value piece-at-point) 'side)) (chess-cn--select-piece cord) (message "无效棋步,当前应对方走子."))
               (message "无效棋步，当前未选择棋子且目标位置处无棋子."))
             ))
       (message "落子位置无效"))
-    (chess-cn--draw-board-by-situation (plist-get chess-cn--playing 'chess-cn--situation)) ;; 重新绘制棋盘
+    (chess-cn--draw-board-by-situation (plist-get chess-cn--playing 'situation)) ;; 重新绘制棋盘
     ;;(message (format "move point to %s" (chess-cn--coordinate-to-position cord)))
     (goto-char (chess-cn--coordinate-to-position cord)) ;; 移动光标到落子位置(有chess-cn--coordinate-to-position 有bug)
     )) 
@@ -497,7 +510,7 @@
 (defun chess-cn--step-debug ()
   "棋步调试"
   (interactive)
-  (message (format "当前走子方: %s, 当前选子: %s" (plist-get chess-cn--playing 'chess-cn--curt-side) (plist-get chess-cn--playing 'chess-cn--curt-selected-cord))))
+  (message (format "当前走子方: %s, 当前选子: %s" (plist-get chess-cn--playing 'curt-side) (plist-get chess-cn--playing 'curt-selected-cord))))
 
 ;; }}} 内核框架
 
@@ -692,7 +705,7 @@
   (insert "\n")
   (set-marker chess-cn--board-end (point)) ;; 棋盘结束位置标记
   (chess-cn--playing-init) ;; 对弈信息初始化
-  (chess-cn--draw-board-by-situation (plist-get chess-cn--playing 'chess-cn--situation)) ;; 绘制棋盘
+  (chess-cn--draw-board-by-situation (plist-get chess-cn--playing 'situation)) ;; 绘制棋盘
   (chess-cn--move-point-to '(0 . 0))) ;; 初始化光标位置
 
 (defun chess-cn--save ()
@@ -718,7 +731,7 @@
   (insert "\n")
   (set-marker chess-cn--board-end (point)) ;; 棋盘结束位置标记
   (setq chess-cn--playing (read (chess-cn--get-string-from-file (read-file-name "请选择棋局文件" (file-name-as-directory chess-cn--saved-dir)))))
-  (chess-cn--draw-board-by-situation (plist-get chess-cn--playing 'chess-cn--situation)) ;; 绘制棋盘
+  (chess-cn--draw-board-by-situation (plist-get chess-cn--playing 'situation)) ;; 绘制棋盘
   (chess-cn--move-point-to '(0 . 0)) ;; 初始化光标位置
   )
 
