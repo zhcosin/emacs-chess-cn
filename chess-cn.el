@@ -66,6 +66,16 @@
     (concat str (chess-cn--scale-string str (1- num))))
    (t nil)))
 
+;; copy from cl-lib.el of cl package.
+(defun chess-cn--copy-list (list)
+  "Return a copy of LIST, which may be a dotted list.
+The elements of LIST are not copied, just the list structure itself."
+  (if (consp list)
+      (let ((res nil))
+	(while (consp list) (push (pop list) res))
+	(prog1 (nreverse res) (setcdr res list)))
+    (car list)))
+
 (defun chess-cn--range-between-p (a b x &optional left-eq right-eq)
   "判断x是否在 a 与 b 之间(a与b大小无要求)，left-eq 与 right-eq 为是否允许等于左右边界"
   (and (funcall (if left-eq '>= '>) x (min a b)) (funcall (if right-eq '<= '<) x (max a b))))
@@ -371,38 +381,9 @@
 (defun chess-cn--copy-init-situation (chess-cn--init-situation)
   "深拷贝初始棋局"
   (if chess-cn--init-situation
-      (cons (copy-list (car chess-cn--init-situation)) (chess-cn--copy-init-situation (cdr chess-cn--init-situation)))
+      (cons (chess-cn--copy-list (car chess-cn--init-situation)) (chess-cn--copy-init-situation (cdr chess-cn--init-situation)))
     nil)
   )
-
-(define-derived-mode chinese-chess-cn--mode special-mode "Chinese-Chess"
-  "中国象棋主模式"
-  (make-local-variable 'chess-cn--playing)
-
-  ;;(define-key chinese-chess-cn--mode-map (kbd "<up>") 'chess-cn--move-point-up)
-  ;;(define-key chinese-chess-cn--mode-map (kbd "<down>") 'chess-cn--move-point-down)
-  ;;(define-key chinese-chess-cn--mode-map (kbd "<left>") 'chess-cn--move-point-left)
-  ;;(define-key chinese-chess-cn--mode-map (kbd "<right>") 'chess-cn--move-point-right)
-
-  (evil-define-key 'normal chinese-chess-cn--mode-map (kbd "RET") 'chess-cn--step-cmd)
-
-  (evil-define-key 'normal chinese-chess-cn--mode-map (kbd "<up>") 'chess-cn--move-point-up)
-  (evil-define-key 'normal chinese-chess-cn--mode-map (kbd "<down>") 'chess-cn--move-point-down)
-  (evil-define-key 'normal chinese-chess-cn--mode-map (kbd "<left>") 'chess-cn--move-point-left)
-  (evil-define-key 'normal chinese-chess-cn--mode-map (kbd "<right>") 'chess-cn--move-point-right)
-
-  (evil-define-key 'normal chinese-chess-cn--mode-map (kbd "k") 'chess-cn--move-point-up)
-  (evil-define-key 'normal chinese-chess-cn--mode-map (kbd "j") 'chess-cn--move-point-down)
-  (evil-define-key 'normal chinese-chess-cn--mode-map (kbd "h") 'chess-cn--move-point-left)
-  (evil-define-key 'normal chinese-chess-cn--mode-map (kbd "l") 'chess-cn--move-point-right))
-
-(add-hook 'chinese-chess-cn--mode-hook
-          (lambda ()
-            (setq-local global-hl-line-mode nil) ;; 关闭主缓冲区当前行高亮
-            (setq-local cursor-type 'box)))      ;; 设置主缓冲区光标为块状
-
-
-;;(add-to-list 'evil-emacs-state-modes 'chinese-chess-cn--mode)
 
 (defun chess-cn--get-piece-from-situation (cord)
   "根据坐标获取棋局上的棋子(符号)"
@@ -769,6 +750,51 @@
   (chess-cn--move-point-to '(0 . 0)) ;; 初始化光标位置
   )
 
+
+(define-derived-mode chinese-chess-cn--mode special-mode "Chinese-Chess"
+  "中国象棋主模式"
+  (make-local-variable 'chess-cn--playing)
+
+  (if (featurep 'evil)
+    (progn
+      (evil-define-key 'normal chinese-chess-cn--mode-map (kbd "RET") 'chess-cn--step-cmd)
+      (evil-define-key 'normal chinese-chess-cn--mode-map (kbd "C-c C-n") 'chess-cn--new)
+      (evil-define-key 'normal chinese-chess-cn--mode-map (kbd "C-c C-u") 'chess-cn--undo)
+      (evil-define-key 'normal chinese-chess-cn--mode-map (kbd "C-c C-s") 'chess-cn--save)
+      (evil-define-key 'normal chinese-chess-cn--mode-map (kbd "C-c C-l") 'chess-cn--load)
+      (evil-define-key 'normal chinese-chess-cn--mode-map (kbd "<up>") 'chess-cn--move-point-up)
+      (evil-define-key 'normal chinese-chess-cn--mode-map (kbd "<down>") 'chess-cn--move-point-down)
+      (evil-define-key 'normal chinese-chess-cn--mode-map (kbd "<left>") 'chess-cn--move-point-left)
+      (evil-define-key 'normal chinese-chess-cn--mode-map (kbd "<right>") 'chess-cn--move-point-right)
+      (evil-define-key 'normal chinese-chess-cn--mode-map (kbd "k") 'chess-cn--move-point-up)
+      (evil-define-key 'normal chinese-chess-cn--mode-map (kbd "j") 'chess-cn--move-point-down)
+      (evil-define-key 'normal chinese-chess-cn--mode-map (kbd "h") 'chess-cn--move-point-left)
+      (evil-define-key 'normal chinese-chess-cn--mode-map (kbd "l") 'chess-cn--move-point-right))
+    (progn
+      (define-key chinese-chess-cn--mode-map (kbd "RET") 'chess-cn--step-cmd)
+      (define-key chinese-chess-cn--mode-map (kbd "C-c C-n") 'chess-cn--new)
+      (define-key chinese-chess-cn--mode-map (kbd "C-c C-u") 'chess-cn--undo)
+      (define-key chinese-chess-cn--mode-map (kbd "C-c C-s") 'chess-cn--save)
+      (define-key chinese-chess-cn--mode-map (kbd "C-c C-l") 'chess-cn--load)
+      (define-key chinese-chess-cn--mode-map (kbd "<up>") 'chess-cn--move-point-up)
+      (define-key chinese-chess-cn--mode-map (kbd "<down>") 'chess-cn--move-point-down)
+      (define-key chinese-chess-cn--mode-map (kbd "<left>") 'chess-cn--move-point-left)
+      (define-key chinese-chess-cn--mode-map (kbd "<right>") 'chess-cn--move-point-right)
+      (define-key chinese-chess-cn--mode-map (kbd "C-p") 'chess-cn--move-point-up)
+      (define-key chinese-chess-cn--mode-map (kbd "C-n") 'chess-cn--move-point-down)
+      (define-key chinese-chess-cn--mode-map (kbd "C-b") 'chess-cn--move-point-left)
+      (define-key chinese-chess-cn--mode-map (kbd "C-f") 'chess-cn--move-point-right)
+      ))
+  )
+
+(add-hook 'chinese-chess-cn--mode-hook
+          (lambda ()
+            (setq-local global-hl-line-mode nil) ;; 关闭主缓冲区当前行高亮
+            (setq-local cursor-type 'box) ;; 设置主缓冲区光标为块状
+            ))      
+
+(global-set-key (kbd "C-c C-n") 'chess-cn--new)
+(global-set-key (kbd "C-c C-l") 'chess-cn--load)
 
 (provide 'chess-cn)
 
