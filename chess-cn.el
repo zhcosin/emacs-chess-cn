@@ -361,12 +361,20 @@ The elements of LIST are not copied, just the list structure itself."
    )
   "初始棋局")
 
-(defvar chess-cn--playing '(game-over nil curt-side nil curt-selected-cord nil situation nil history nil)
+(defvar chess-cn--playing '(
+                            game-over nil                     ;; 对弈是否已结束
+                            curt-side nil                     ;; 当前走子方
+                            curt-selected-cord nil            ;; 当前选子坐标
+                            situation nil                     ;; 当前棋局矩阵
+                            piece-cords nil                   ;; 棋子坐标列表
+                            history nil                       ;; 棋步历史
+                            )
   "对弈信息，包括对弈是否已结束、当前走子方、当前所选棋子的坐标、当前棋局(10x9二维棋子矩阵)")
 (defun chess-cn--playing-init ()
   "对弈信息初始化"
   (plist-put chess-cn--playing 'game-over nil)
   (plist-put chess-cn--playing 'situation (chess-cn--copy-init-situation chess-cn--init-situation)) ;; 初始棋局
+  (plist-put chess-cn--playing 'piece-cords (chess-cn--get-piece-cords-by-scan-situation))
   (plist-put chess-cn--playing 'curt-side nil)
   (plist-put chess-cn--playing 'curt-selected-cord nil))
 
@@ -408,13 +416,49 @@ The elements of LIST are not copied, just the list structure itself."
   "获取对弈对方"
   (if (eq side 'chess-cn--side-blue) 'chess-cn--side-red 'chess-cn--side-blue))
 
+(defun chess-cn--get-piece-cords-by-scan-situation ()
+  "通过扫描一遍棋局，生成所有棋子坐标属性列表"
+  (let ((piece-cords nil)
+        (x 0)
+        (y 0)
+        (piece))
+    (while (< y 10)
+      (setq x 0)
+      (while (< x 9)
+        (setq piece (chess-cn--get-piece-from-situation (cons x y)))
+        (when piece
+          (setq piece-cords (cons (cons piece (cons x y)) piece-cords)))
+        (setq x (1+ x)))
+      (setq y (1+ y)))
+    piece-cords))
+
+(defun chess-cn--search-piece-from-situation (piece)
+  "在棋局上搜索棋子坐标，参数 piece 为棋子符号"
+  (let ((x nil)
+        (y 0)
+        (situation-remain (plist-get chess-cn--playing 'situation)))
+    (while (and (< y 10) (not x))
+      (setq x (position piece (car situation-remain) :test #'eq))
+      (setq y (1+ y))
+      (setq situation-remain (cdr situation-remain)))
+    (cons x y)))
+
+(defun chess-cn--get-piece-cord (piece)
+  "获取棋子坐标，参数 piece 为棋子符号"
+  (chess-cn--search-piece-from-situation piece))
+
+(defun chess-cn--king-meet (oldcord dstcord)
+  "判断按期望走子后将帅是否会直线碰面"
+  nil
+  )
+
 (defun chess-cn--select-piece (cord)
   "选择棋子, 更新当前所选棋子，并将允许走子方设为所选棋子所属方(以应对棋局首步棋)"
   (plist-put chess-cn--playing 'curt-selected-cord cord)
   (plist-put chess-cn--playing 'curt-side (plist-get (symbol-value (chess-cn--get-piece-from-situation cord)) 'side))
   (chess-cn--step-debug))
 
-;; 走子
+
 ;; 走子之前先判断是否符合兵种走棋规则，包括基本规则及棋局规则
 (defun chess-cn--move-piece (oldcord dstcord)
   "移动棋子"
@@ -426,13 +470,15 @@ The elements of LIST are not copied, just the list structure itself."
         (plist-get (symbol-value (plist-get (symbol-value (chess-cn--get-piece-from-situation oldcord)) 'type)) 'move-rule)
         oldcord
         dstcord
-        (plist-get chess-cn--playing 'situation)))
+        (plist-get chess-cn--playing 'situation))
+       (not (chess-cn--king-meet oldcord dstcord)))
       (progn
-          (chess-cn--set-piece-to-situation dstcord (chess-cn--get-piece-from-situation oldcord))
-          (chess-cn--set-piece-to-situation oldcord nil)
-          (plist-put chess-cn--playing 'curt-selected-cord nil)
-          (plist-put chess-cn--playing 'curt-side (chess-cn--get-other-side (plist-get chess-cn--playing 'curt-side)))
-          (chess-cn--push-history oldcord dstcord nil)) ;; 记录棋步历史
+        (plist-put (plist-get chess-cn--playing 'piece-cords) (chess-cn--get-piece-from-situation oldcord) dstcord)
+        (chess-cn--set-piece-to-situation dstcord (chess-cn--get-piece-from-situation oldcord))
+        (chess-cn--set-piece-to-situation oldcord nil)
+        (plist-put chess-cn--playing 'curt-selected-cord nil)
+        (plist-put chess-cn--playing 'curt-side (chess-cn--get-other-side (plist-get chess-cn--playing 'curt-side)))
+        (chess-cn--push-history oldcord dstcord nil)) ;; 记录棋步历史
     (message "违反走子规则")))
 
 (defun chess-cn--kill-piece (oldcord dstcord)
@@ -445,11 +491,14 @@ The elements of LIST are not copied, just the list structure itself."
         (plist-get (symbol-value (plist-get (symbol-value (chess-cn--get-piece-from-situation oldcord)) 'type)) 'kill-rule)
         oldcord
         dstcord
-        (plist-get chess-cn--playing 'situation)))
+        (plist-get chess-cn--playing 'situation))
+       (not (chess-cn--king-meet oldcord dstcord)))
       (progn
         (let ((killed-piece (chess-cn--get-piece-from-situation dstcord))
               (kill-piece (chess-cn--get-piece-from-situation oldcord)))
           (message (format "%s 被吃掉." killed-piece))
+          (plist-put (plist-get chess-cn--playing 'piece-cords) kill-piece dstcord)
+          (plist-put (plist-get chess-cn--playing 'piece-cords) killed-piece nil)
           (chess-cn--set-piece-to-situation dstcord kill-piece)
           (chess-cn--set-piece-to-situation oldcord nil)
           (plist-put chess-cn--playing 'curt-selected-cord nil)
@@ -704,6 +753,8 @@ The elements of LIST are not copied, just the list structure itself."
   (set-marker chess-cn--board-end (point)) ;; 棋盘结束位置标记
   (chess-cn--playing-init) ;; 对弈信息初始化
   (chess-cn--draw-board-by-situation (plist-get chess-cn--playing 'situation)) ;; 绘制棋盘
+  ;;(message "红炮二坐标 %s" (chess-cn--get-piece-cord 'chess-cn--piece-red-pao-2)) ;; test
+  ;;(message "%s" (chess-cn--get-piece-cords-by-scan-situation))
   (chess-cn--move-point-to '(0 . 0))) ;; 初始化光标位置
 
 (defun chess-cn--undo ()
