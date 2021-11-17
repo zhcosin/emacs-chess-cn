@@ -378,10 +378,23 @@
 (define-derived-mode chinese-chess-cn--mode special-mode "Chinese-Chess"
   "中国象棋主模式"
   (make-local-variable 'chess-cn--playing)
-  (define-key chinese-chess-cn--mode-map (kbd "<up>") 'chess-cn--move-point-up)
-  (define-key chinese-chess-cn--mode-map (kbd "<down>") 'chess-cn--move-point-down)
-  (define-key chinese-chess-cn--mode-map (kbd "<left>") 'chess-cn--move-point-left)
-  (define-key chinese-chess-cn--mode-map (kbd "<right>") 'chess-cn--move-point-right))
+
+  ;;(define-key chinese-chess-cn--mode-map (kbd "<up>") 'chess-cn--move-point-up)
+  ;;(define-key chinese-chess-cn--mode-map (kbd "<down>") 'chess-cn--move-point-down)
+  ;;(define-key chinese-chess-cn--mode-map (kbd "<left>") 'chess-cn--move-point-left)
+  ;;(define-key chinese-chess-cn--mode-map (kbd "<right>") 'chess-cn--move-point-right)
+
+  (evil-define-key 'normal chinese-chess-cn--mode-map (kbd "RET") 'chess-cn--step-cmd)
+
+  (evil-define-key 'normal chinese-chess-cn--mode-map (kbd "<up>") 'chess-cn--move-point-up)
+  (evil-define-key 'normal chinese-chess-cn--mode-map (kbd "<down>") 'chess-cn--move-point-down)
+  (evil-define-key 'normal chinese-chess-cn--mode-map (kbd "<left>") 'chess-cn--move-point-left)
+  (evil-define-key 'normal chinese-chess-cn--mode-map (kbd "<right>") 'chess-cn--move-point-right)
+
+  (evil-define-key 'normal chinese-chess-cn--mode-map (kbd "k") 'chess-cn--move-point-up)
+  (evil-define-key 'normal chinese-chess-cn--mode-map (kbd "j") 'chess-cn--move-point-down)
+  (evil-define-key 'normal chinese-chess-cn--mode-map (kbd "h") 'chess-cn--move-point-left)
+  (evil-define-key 'normal chinese-chess-cn--mode-map (kbd "l") 'chess-cn--move-point-right))
 
 (add-hook 'chinese-chess-cn--mode-hook
           (lambda ()
@@ -390,18 +403,6 @@
 
 
 ;;(add-to-list 'evil-emacs-state-modes 'chinese-chess-cn--mode)
-(evil-define-key 'normal chinese-chess-cn--mode-map (kbd "RET") 'chess-cn--step-cmd)
-
-(evil-define-key 'normal chinese-chess-cn--mode-map (kbd "<up>") 'chess-cn--move-point-up)
-(evil-define-key 'normal chinese-chess-cn--mode-map (kbd "<down>") 'chess-cn--move-point-down)
-(evil-define-key 'normal chinese-chess-cn--mode-map (kbd "<left>") 'chess-cn--move-point-left)
-(evil-define-key 'normal chinese-chess-cn--mode-map (kbd "<right>") 'chess-cn--move-point-right)
-
-(evil-define-key 'normal chinese-chess-cn--mode-map (kbd "k") 'chess-cn--move-point-up)
-(evil-define-key 'normal chinese-chess-cn--mode-map (kbd "j") 'chess-cn--move-point-down)
-(evil-define-key 'normal chinese-chess-cn--mode-map (kbd "h") 'chess-cn--move-point-left)
-(evil-define-key 'normal chinese-chess-cn--mode-map (kbd "l") 'chess-cn--move-point-right)
-
 
 (defun chess-cn--get-piece-from-situation (cord)
   "根据坐标获取棋局上的棋子(符号)"
