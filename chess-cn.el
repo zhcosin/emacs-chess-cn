@@ -416,6 +416,23 @@ The elements of LIST are not copied, just the list structure itself."
   "根据坐标设置棋子(符号)"
   (setf (nth (car cord) (nth (cdr cord) (plist-get chess-cn--playing 'situation))) piece))
 
+(defun chess-cn--move-piece-impl (piece oldcord dstcord)
+  "将棋子从棋盘上某位置移动另一位置(无规则判断)"
+  (chess-cn--set-piece-to-situation dstcord piece)
+  (chess-cn--set-piece-to-situation oldcord nil)
+  (plist-put (plist-get chess-cn--playing 'piece-cords) piece dstcord))
+
+(defun chess-cn--remove-piece-impl (piece oldcord)
+  "从棋盘上移除指定棋子"
+  (chess-cn--set-piece-to-situation oldcord nil)
+  (plist-put (plist-get chess-cn--playing 'piece-cords) piece nil))
+
+(defun chess-cn--restore-piece-impl (piece cord)
+  "将棋子恢复到棋盘上指定位置(悔棋时使用)"
+  (chess-cn--set-piece-to-situation cord piece)
+  (plist-put (plist-get chess-cn--playing 'piece-cords) piece cord))
+
+
 (defun chess-cn--get-other-side (side)
   "获取对弈对方"
   (if (eq side 'chess-cn--side-blue) 'chess-cn--side-red 'chess-cn--side-blue))
@@ -490,9 +507,10 @@ The elements of LIST are not copied, just the list structure itself."
 
 (defun chess-cn--move-piece (oldcord dstcord)
   "移动棋子"
-  (plist-put (plist-get chess-cn--playing 'piece-cords) (chess-cn--get-piece-from-situation oldcord) dstcord)
-  (chess-cn--set-piece-to-situation dstcord (chess-cn--get-piece-from-situation oldcord))
-  (chess-cn--set-piece-to-situation oldcord nil)
+  ;;(plist-put (plist-get chess-cn--playing 'piece-cords) (chess-cn--get-piece-from-situation oldcord) dstcord)
+  ;;(chess-cn--set-piece-to-situation dstcord (chess-cn--get-piece-from-situation oldcord))
+  ;;(chess-cn--set-piece-to-situation oldcord nil)
+  (chess-cn--move-piece-impl (chess-cn--get-piece-from-situation oldcord) oldcord dstcord)
   (plist-put chess-cn--playing 'curt-selected-cord nil)
   (plist-put chess-cn--playing 'curt-side (chess-cn--get-other-side (plist-get chess-cn--playing 'curt-side)))
   (chess-cn--push-history oldcord dstcord nil) ;; 棋步历史记录
@@ -525,11 +543,13 @@ The elements of LIST are not copied, just the list structure itself."
   (progn
     (let ((killed-piece (chess-cn--get-piece-from-situation dstcord))
           (kill-piece (chess-cn--get-piece-from-situation oldcord)))
-      (message (format "%s 被吃掉." killed-piece))
-      (plist-put (plist-get chess-cn--playing 'piece-cords) kill-piece dstcord)
-      (plist-put (plist-get chess-cn--playing 'piece-cords) killed-piece nil)
-      (chess-cn--set-piece-to-situation dstcord kill-piece)
-      (chess-cn--set-piece-to-situation oldcord nil)
+      ;;(message (format "%s 被吃掉." killed-piece))
+      ;;(plist-put (plist-get chess-cn--playing 'piece-cords) kill-piece dstcord)
+      ;;(plist-put (plist-get chess-cn--playing 'piece-cords) killed-piece nil)
+      ;;(chess-cn--set-piece-to-situation dstcord kill-piece)
+      ;;(chess-cn--set-piece-to-situation oldcord nil)
+      (chess-cn--remove-piece-impl killed-piece dstcord)
+      (chess-cn--move-piece-impl kill-piece oldcord dstcord)
       (plist-put chess-cn--playing 'curt-selected-cord nil)
       (plist-put chess-cn--playing 'curt-side (chess-cn--get-other-side (plist-get chess-cn--playing 'curt-side)))
       (chess-cn--push-history oldcord dstcord killed-piece) ;; 记录棋步历史
@@ -807,12 +827,14 @@ The elements of LIST are not copied, just the list structure itself."
                    'side))
       (let ((kill-piece (chess-cn--get-piece-from-situation (plist-get last-history 'dstcord)))
             (killed-piece (plist-get last-history 'killed-piece)))
-        ;; 恢复吃子
-        (plist-put (plist-get chess-cn--playing 'piece-cords) kill-piece (plist-get last-history 'oldcord))
-        (chess-cn--set-piece-to-situation (plist-get last-history 'oldcord) kill-piece)
-        ;; 恢复被吃子
-        (plist-put (plist-get chess-cn--playing 'piece-cords) killed-piece (plist-get last-history 'dstcord))
-        (chess-cn--set-piece-to-situation (plist-get last-history 'dstcord) killed-piece))
+        ;; 恢复吃子，移回旧位置
+        ;;(plist-put (plist-get chess-cn--playing 'piece-cords) kill-piece (plist-get last-history 'oldcord))
+        ;;(chess-cn--set-piece-to-situation (plist-get last-history 'oldcord) kill-piece)
+        (chess-cn--move-piece-impl kill-piece (plist-get last-history 'dstcord) (plist-get last-history 'oldcord)) 
+        ;; 恢复被吃子到棋盘上
+        ;;(plist-put (plist-get chess-cn--playing 'piece-cords) killed-piece (plist-get last-history 'dstcord))
+        ;;(chess-cn--set-piece-to-situation (plist-get last-history 'dstcord) killed-piece))
+        (chess-cn--restore-piece-impl killed-piece (plist-get last-history 'dstcord)))
       (chess-cn--draw-board-by-situation (plist-get chess-cn--playing 'situation)) ;; 绘制棋盘
         (chess-cn--move-point-to '(0 . 0))))) ;; 初始化光标位置
 
