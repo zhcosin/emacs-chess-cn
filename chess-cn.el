@@ -473,7 +473,7 @@ The elements of LIST are not copied, just the list structure itself."
   (let ((blue-jiang-cord (plist-get (plist-get chess-cn--playing 'piece-cords) 'chess-cn--piece-blue-jiang))
         (red-shuai-cord (plist-get (plist-get chess-cn--playing 'piece-cords) 'chess-cn--piece-red-shuai)))
   (and
-   (message "%s,   %s" blue-jiang-cord red-shuai-cord)
+   ;;(message "%s,   %s" blue-jiang-cord red-shuai-cord)
    (equal (car blue-jiang-cord) (car red-shuai-cord))
    (chess-cn--accumulate
     (mapcar
