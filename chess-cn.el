@@ -86,6 +86,29 @@ The elements of LIST are not copied, just the list structure itself."
 	(prog1 (nreverse res) (setcdr res list)))
     (car list)))
 
+(defun chess-cn--concat-list-2 (list1 list2)
+  "拼接列表，返回两个结果拼接结果，不保证顺序"
+  (if list1
+      (chess-cn--concat-list (cdr list1) (cons (car list1) list2))
+    list2))
+
+(defun chess-cn--concat-list (list1 list2 &rest other)
+  "拼接多个列表，返回拼接结果，不保证元素顺序"
+  (let ((res (chess-cn--concat-list-2 list1 list2)))
+    (while other
+      (setq res (chess-cn--concat-list-2 res (car other)))
+      (setq other (cdr other)))
+    res))
+
+(defun chess-cn--keep-if (pred list)
+  "返回列表中符合条件的元素列表"
+  (if list
+      (if (funcall pred (car list))
+          (cons (car list) (chess-cn--keep-if pred (cdr list)))
+        (chess-cn--keep-if pred (cdr list)))
+    nil)
+  )
+
 (defun chess-cn--range-between-p (a b x &optional left-eq right-eq)
   "判断x是否在 a 与 b 之间(a与b大小无要求)，left-eq 与 right-eq 为是否允许等于左右边界"
   (and (funcall (if left-eq '>= '>) x (min a b)) (funcall (if right-eq '<= '<) x (max a b))))
@@ -94,9 +117,12 @@ The elements of LIST are not copied, just the list structure itself."
   "得到 a 与 b(>a) 之间的整数列表"
   (if (>= (1+ a) b) nil (cons (1+ a) (chess-cn--get-range-between-sorted (1+ a) b))))
 
-(defun chess-cn--get-range-between (a b)
+(defun chess-cn--get-range-between (a b &optional keep-left keep-right)
   "得到 a 与 b (未指定大小)之间的整数列表"
-  (chess-cn--get-range-between-sorted (min a b) (max a b)))
+  (chess-cn--concat-list
+   (when keep-left (list (min a b)))
+   (chess-cn--get-range-between-sorted (min a b) (max a b))
+   (when keep-right (list (max a b)))))
 
 ;; 通用累加器
 (defun chess-cn--accumulate (li processor init-value accumulator)
@@ -306,13 +332,13 @@ The elements of LIST are not copied, just the list structure itself."
 
 
 ;; 兵种
-(defconst chess-cn--piece-type-ju '(name (chess-cn--side-blue "車" chess-cn--side-red "車") move-rule chess-cn--move-rule-ju kill-rule chess-cn--kill-rule-ju is-king nil) "")
-(defconst chess-cn--piece-type-ma '(name (chess-cn--side-blue "馬" chess-cn--side-red "馬") move-rule chess-cn--move-rule-ma kill-rule chess-cn--kill-rule-ma is-king nil) "")
-(defconst chess-cn--piece-type-pao '(name (chess-cn--side-blue "砲" chess-cn--side-red "炮") move-rule chess-cn--move-rule-pao kill-rule chess-cn--kill-rule-pao is-king nil) "")
-(defconst chess-cn--piece-type-bingzu '(name (chess-cn--side-blue "卒" chess-cn--side-red "兵") move-rule chess-cn--move-rule-bingzu kill-rule chess-cn--kill-rule-bingzu is-king nil) "")
-(defconst chess-cn--piece-type-xiang '(name (chess-cn--side-blue "象" chess-cn--side-red "相") move-rule chess-cn--move-rule-xiang kill-rule chess-cn--kill-rule-xiang is-king nil) "")
-(defconst chess-cn--piece-type-shi '(name (chess-cn--side-blue "士" chess-cn--side-red "仕") move-rule chess-cn--move-rule-shi kill-rule chess-cn--kill-rule-shi is-king nil) "")
-(defconst chess-cn--piece-type-jiangshuai '(name (chess-cn--side-blue "將" chess-cn--side-red "帥") move-rule chess-cn--move-rule-jiangshuai kill-rule chess-cn--kill-rule-jiangshuai is-king t) "")
+(defconst chess-cn--piece-type-ju '(name (chess-cn--side-blue "車" chess-cn--side-red "車") move-rule chess-cn--move-rule-ju kill-rule chess-cn--kill-rule-ju 'enum-rule chess-cn--enum-move-or-kill-ju is-king nil) "")
+(defconst chess-cn--piece-type-ma '(name (chess-cn--side-blue "馬" chess-cn--side-red "馬") move-rule chess-cn--move-rule-ma kill-rule chess-cn--kill-rule-ma 'enum-rule chess-cn--enum-move-or-kill-ma is-king nil) "")
+(defconst chess-cn--piece-type-pao '(name (chess-cn--side-blue "砲" chess-cn--side-red "炮") move-rule chess-cn--move-rule-pao kill-rule chess-cn--kill-rule-pao 'enum-rule chess-cn--enum-move-or-kill-pao is-king nil) "")
+(defconst chess-cn--piece-type-bingzu '(name (chess-cn--side-blue "卒" chess-cn--side-red "兵") move-rule chess-cn--move-rule-bingzu kill-rule chess-cn--kill-rule-bingzu 'enum-rule chess-cn--enum-move-or-kill-bingzu is-king nil) "")
+(defconst chess-cn--piece-type-xiang '(name (chess-cn--side-blue "象" chess-cn--side-red "相") move-rule chess-cn--move-rule-xiang kill-rule chess-cn--kill-rule-xiang 'enum-rule chess-cn--enum-move-or-kill-xiang is-king nil) "")
+(defconst chess-cn--piece-type-shi '(name (chess-cn--side-blue "士" chess-cn--side-red "仕") move-rule chess-cn--move-rule-shi kill-rule chess-cn--kill-rule-shi 'enum-rule chess-cn--enum-move-or-kill-shi is-king nil) "")
+(defconst chess-cn--piece-type-jiangshuai '(name (chess-cn--side-blue "將" chess-cn--side-red "帥") move-rule chess-cn--move-rule-jiangshuai kill-rule chess-cn--kill-rule-jiangshuai 'enum-rule chess-cn--enum-move-or-kill-jiangshuai is-king t) "")
 
 ;; 蓝方棋子
 (defconst chess-cn--piece-blue-jiang '(side chess-cn--side-blue type chess-cn--piece-type-jiangshuai) "蓝将")
@@ -402,6 +428,16 @@ The elements of LIST are not copied, just the list structure itself."
       (cons (chess-cn--copy-list (car chess-cn--init-situation)) (chess-cn--copy-init-situation (cdr chess-cn--init-situation)))
     nil)
   )
+
+(defun chess-cn--inner-cord-to-side (side cord)
+  "坐标转换，内部坐标转指定对弈方的坐标，内部坐标与蓝方坐标一致"
+  (if (eq side 'chess-cn--side-blue)
+      cord
+    (cons (- 8 (car cord)) (- 9 (cdr cord)))))
+
+(defun chess-cn--side-cord-to-inner (side cord)
+  "坐标转换，对弈方坐标转换为内部坐标"
+  (if (eq side 'chess-cn--side-blue) cord (cons (- 8 (car cord)) (- 9 (cdr cord)))))
 
 (defun chess-cn--get-piece-from-situation (cord)
   "根据坐标获取棋局上的棋子(符号)"
@@ -554,6 +590,40 @@ is-move t 为移动, nil 为吃子
       (chess-cn--kill-piece oldcord dstcord))
     (chess-cn--king-under-threat-p (plist-get (chess-cn--get-piece-value-from-situation dstcord) 'side))  ;; 模拟棋步下，己方将帅是否面临威胁
     (chess-cn--undo)))
+
+(defun chess-cn--enum-any-move-or-kill-of-piece (piece)
+  "枚举当前棋局下，指定棋子的所有可能的走法
+
+结果形如 ((oldcord . dstcord) ...)"
+  (let ((curt-cord (plist-get (plist-get chess-cn--playing 'piece-cords) piece-or-cord))
+        (side (plist-get (symbol-value piece) 'side)))
+    (if curt-cord
+        (mapcar (lambda (dstcord) (cons curt-cord dstcord))
+                (funcall (plist-get (symbol-value (plist-get (symbol-value piece) 'type)) 'enum-threat) side curt-cord))
+      nil))
+  )
+
+(defun chess-cn--enum-any-move-or-kill (side)
+  "枚举当前棋局下，指定方所有可能的走法
+
+结果形如 ((oldcord . dstcord) ...)"
+  (chess-cn--accumulate
+   (plist-get chess-cn--playing 'piece-cords)
+   (lambda (piece-or-cord)
+     (when (and piece-or-cord
+                (symbolp piece-or-cord)
+                (eq side (plist-get (symbol-value piece-or-cord) 'side))
+                (plist-get (plist-get chess-cn--playing 'piece-cords) piece-or-cord))
+         (chess-cn--enum-any-move-or-kill-of-piece piece-or-cord)))
+   nil
+   'chess-cn--concat-list)
+  )
+
+(defun chess-cn--dead (side)
+  "判断指定方是否已经是死局
+
+判断依据是可能的走法列表为空"
+  (not (chess-cn--enum-any-move-or-kill side)))
   
 
 (defun chess-cn--can-move-piece-p (oldcord dstcord)
@@ -562,7 +632,7 @@ is-move t 为移动, nil 为吃子
        (chess-cn--move-kill-base-rule oldcord dstcord)  ;; 基本规则，不可越界，不可原地踏步
        (chess-cn--piece-type-rule-verify oldcord dstcord 'move-rule) ;; 兵种移动规则校验
        (not (chess-cn--king-will-meet-after oldcord dstcord t)) ;; 走棋后将帅不得见面
-       (not (chess-cn--king-under-threat-after oldcord dstcord t)) ;; 走棋后不能给己方将帅带来威胁
+       (not (chess-cn--king-under-threat-after oldcord dstcord t)) ;; 走棋后己方将帅不能面临威胁
        ))
 
 (defun chess-cn--move-piece (oldcord dstcord)
@@ -579,21 +649,28 @@ is-move t 为移动, nil 为吃子
 (defun chess-cn--try-move-piece (oldcord dstcord)
   "在符合移动规则的前提下，进行走子操作"
   (if (chess-cn--can-move-piece-p oldcord dstcord)
-      (progn
+      (let ((moved-piece (chess-cn--get-piece-from-situation oldcord)))
         (chess-cn--move-piece oldcord dstcord)
         (when (chess-cn--king-under-threat-p (plist-get chess-cn--playing 'curt-side))
-          (message "%s被将军!" (plist-get (symbol-value (plist-get chess-cn--playing 'curt-side)) 'name)))
-        )
+          (message "%s被将军!" (plist-get (symbol-value (plist-get chess-cn--playing 'curt-side)) 'name))
+          (when (chess-cn--dead (symbol-value (plist-get chess-cn--playing 'curt-side)))
+            (plist-put chess-cn--playing 'game-over t) 
+            (message (format "对弈结束, %s胜出." (plist-get (symbol-value (plist-get (symbol-value moved-piece) 'side)) 'name))))))
     (message "违反走子规则")))
 
 (defun chess-cn--can-kill-piece (oldcord dstcord)
   "判断是否是符合规则的吃子操作"
-  (and 
+  (let ((kill-piece (chess-cn--get-piece-from-situation oldcord))
+         (killed-piece (chess-cn--get-piece-from-situation dstcord)))
+    (and 
        (chess-cn--move-kill-base-rule oldcord dstcord) ;; 棋盘基本规则，不可越界，不可原地踏步
+       kill-piece ;; 原始位置有棋子
+       killed-piece ;; 目标位置有棋子
+       (not (equal (plist-get (symbol-value kill-piece) 'side) (plist-get (symbol-value killed-piece) 'side))) ;; 原始位置位置及目标位置处的棋子不同属一方
        (chess-cn--piece-type-rule-verify oldcord dstcord 'kill-rule) ;; 兵种吃子规则校验
        (not (chess-cn--king-will-meet-after oldcord dstcord nil)) ;; 走棋后将帅不得见面
-       (not (chess-cn--king-under-threat-after oldcord dstcord nil)) ;; 走棋后不能给己方将帅带来威胁
-       ))
+       (not (chess-cn--king-under-threat-after oldcord dstcord nil)) ;; 走棋后己方将帅不能面临威胁
+       )))
 
 (defun chess-cn--kill-piece (oldcord dstcord)
   "吃子操作"
@@ -621,7 +698,10 @@ is-move t 为移动, nil 为吃子
       (progn
         (chess-cn--kill-piece oldcord dstcord)
         (when (chess-cn--king-under-threat-p (plist-get chess-cn--playing 'curt-side))
-          (message "%s被将军!" (plist-get (symbol-value (plist-get chess-cn--playing 'curt-side)) 'name)))
+          (message "%s被将军!" (plist-get (symbol-value (plist-get chess-cn--playing 'curt-side)) 'name))
+          (when (chess-cn--dead (symbol-value (plist-get chess-cn--playing 'curt-side)))
+            (plist-put chess-cn--playing 'game-over t) 
+            (message (format "对弈结束, %s胜出." (plist-get (symbol-value (plist-get (symbol-value moved-piece) 'side)) 'name)))))
         )
     (message "违反吃子规则")))
 
@@ -719,6 +799,15 @@ is-move t 为移动, nil 为吃子
   "车的吃子规则，与移动规则相同"
   (chess-cn--move-rule-ju oldcord dstcord situation))
 
+
+(defun chess-cn--enum-move-or-kill-ju (side curt-cord)
+  "枚举车的走法"
+  (chess-cn--keep-if
+   (lambda (dstcord) (if (chess-cn--get-piece-from-situation dstcord) (chess-cn--can-kill-piece curt-cord dstcord) (chess-cn--can-move-piece-p curt-cord dstcord)))
+   (chess-cn--concat-list
+    (mapcar (lambda (x) (cons x (cdr curt-cord))) (chess-cn--keep-if (lambda (x) (not (equal x (car curt-cord)))) (chess-cn--get-range-between 0 8 t t)))
+    (mapcar (lambda (y) (cons (car curt-cord) y)) (chess-cn--keep-if (lambda (y) (not (equal y (cdr curt-cord)))) (chess-cn--get-range-between 0 9 t t))))))
+
 (defun chess-cn--move-rule-ma (oldcord dstcord situation)
   "马的移动规则"
   (cond
@@ -731,6 +820,21 @@ is-move t 为移动, nil 为吃子
 (defun chess-cn--kill-rule-ma (oldcord dstcord situation)
   "马的吃子规则"
   (chess-cn--move-rule-ma oldcord dstcord situation))
+
+(defun chess-cn--enum-move-or-kill-ma (side curt-cord)
+  "枚举马的走法"
+  (chess-cn--keep-if
+   (lambda (dstcord) (if (chess-cn--get-piece-from-situation dstcord) (chess-cn--can-kill-piece curt-cord dstcord) (chess-cn--can-move-piece-p curt-cord dstcord)))
+   (chess-cn--keep-if (lambda (cord) (chess-cn--move-kill-base-rule curt-cord cord))
+                      (list (cons (+ (car curt-cord) 1) (+ (cdr curt-cord) 2))
+                            (cons (+ (car curt-cord) 1) (- (cdr curt-cord) 2))
+                            (cons (- (car curt-cord) 1) (+ (cdr curt-cord) 2))
+                            (cons (- (car curt-cord) 1) (- (cdr curt-cord) 2))
+                            (cons (+ (car curt-cord) 2) (+ (cdr curt-cord) 1))
+                            (cons (+ (car curt-cord) 2) (- (cdr curt-cord) 1))
+                            (cons (- (car curt-cord) 2) (+ (cdr curt-cord) 1))
+                            (cons (- (car curt-cord) 2) (- (cdr curt-cord) 1))))))
+
 
 (defun chess-cn--move-rule-pao (oldcord dstcord situation)
   "炮的移动规则，与车相同"
@@ -755,6 +859,15 @@ is-move t 为移动, nil 为吃子
      0 
      '+))))
 
+(defun chess-cn--enum-move-or-kill-pao (side curt-cord)
+  "枚举炮的走法"
+  (chess-cn--keep-if
+   (lambda (dstcord) (if (chess-cn--get-piece-from-situation dstcord) (chess-cn--can-kill-piece curt-cord dstcord) (chess-cn--can-move-piece-p curt-cord dstcord)))
+   (chess-cn--concat-list
+    (mapcar (lambda (x) (cons x (cdr curt-cord))) (chess-cn--keep-if (lambda (x) (not (equal x (car curt-cord)))) (chess-cn--get-range-between 0 8 t t)))
+    (mapcar (lambda (y) (cons (car curt-cord) y)) (chess-cn--keep-if (lambda (y) (not (equal y (cdr curt-cord)))) (chess-cn--get-range-between 0 9 t t))))))
+
+
 (defun chess-cn--move-rule-jiangshuai (oldcord dstcord situation)
   "将帅走子规则"
   (and
@@ -769,6 +882,19 @@ is-move t 为移动, nil 为吃子
 (defun chess-cn--kill-rule-jiangshuai (oldcord dstcord situation)
   "将帅吃子规则，与走子规则相同"
   (chess-cn--move-rule-jiangshuai oldcord dstcord situation))
+
+
+(defun chess-cn--enum-move-or-kill-jiangshuai (side curt-cord)
+  "枚举将帅的走法"
+  (chess-cn--keep-if
+   (lambda (dstcord) (if (chess-cn--get-piece-from-situation dstcord) (chess-cn--can-kill-piece curt-cord dstcord) (chess-cn--can-move-piece-p curt-cord dstcord)))
+   (chess-cn--keep-if (lambda (cord) (chess-cn--move-kill-base-rule curt-cord cord))
+                      (list (cons (+ (car curt-cord) 1) (cdr curt-cord))
+                            (cons (- (car curt-cord) 1) (cdr curt-cord))
+                            (cons (car curt-cord) (+ (cdr curt-cord) 1))
+                            (cons (car curt-cord) (- (cdr curt-cord) 1))))))
+
+
 
 (defun chess-cn--move-rule-shi (oldcord dstcord situation)
   "士仕走子规则"
@@ -785,6 +911,16 @@ is-move t 为移动, nil 为吃子
   "士仕吃子规则"
   (chess-cn--move-rule-shi oldcord dstcord situation))
 
+(defun chess-cn--enum-move-or-kill-shi (side curt-cord)
+  "枚举士仕的走法"
+  (chess-cn--keep-if
+   (lambda (dstcord) (if (chess-cn--get-piece-from-situation dstcord) (chess-cn--can-kill-piece curt-cord dstcord) (chess-cn--can-move-piece-p curt-cord dstcord)))
+   (chess-cn--keep-if (lambda (cord) (chess-cn--move-kill-base-rule curt-cord cord))
+                      (list (cons (+ (car curt-cord) 1) (+ (cdr curt-cord) 1))
+                            (cons (- (car curt-cord) 1) (+ (cdr curt-cord) 1))
+                            (cons (+ (car curt-cord) 1) (- (cdr curt-cord) 1))
+                            (cons (- (car curt-cord) 1) (- (cdr curt-cord) 1))))))
+
 (defun chess-cn--move-rule-xiang (oldcord dstcord situation)
   "象相走子规则 "
   (and
@@ -800,28 +936,43 @@ is-move t 为移动, nil 为吃子
   "象相吃子规则"
   (chess-cn--move-rule-xiang oldcord dstcord situation))
 
+(defun chess-cn--enum-move-or-kill-xiang (side curt-cord)
+  "枚举象相的走法"
+  (chess-cn--keep-if
+   (lambda (dstcord) (if (chess-cn--get-piece-from-situation dstcord) (chess-cn--can-kill-piece curt-cord dstcord) (chess-cn--can-move-piece-p curt-cord dstcord)))
+   (chess-cn--keep-if (lambda (cord) (chess-cn--move-kill-base-rule curt-cord cord))
+                      (list (cons (+ (car curt-cord) 2) (+ (cdr curt-cord) 2))
+                            (cons (- (car curt-cord) 2) (+ (cdr curt-cord) 2))
+                            (cons (+ (car curt-cord) 2) (- (cdr curt-cord) 2))
+                            (cons (- (car curt-cord) 2) (- (cdr curt-cord) 2))))))
+
 (defun chess-cn--move-rule-bingzu (oldcord dstcord situation)
   "兵卒走子规则"
-  (if
-     (eq 'chess-cn--side-red (plist-get (symbol-value (chess-cn--get-piece-from-situation oldcord)) 'side))
-      (or
+  (let* ((side (plist-get (chess-cn--get-piece-value-from-situation oldcord) 'side))
+         (side-oldcord (chess-cn--inner-cord-to-side side oldcord))
+         (side-dstcord (chess-cn--inner-cord-to-side side dstcord)))
+     (or
           (and ;; 前进
-           (equal (car oldcord) (car dstcord))
-           (equal 1 (- (cdr oldcord) (cdr dstcord))))
+           (equal (car side-oldcord) (car side-dstcord))
+           (equal -1 (- (cdr side-oldcord) (cdr side-dstcord))))
           (and
-           (< (cdr oldcord) 5) ;; 已过河
-           (and (equal (cdr oldcord) (cdr dstcord)) (equal 1 (abs (- (car oldcord) (car dstcord)))))))
-      (or
-          (and ;; 前进
-           (equal (car oldcord) (car dstcord))
-           (equal -1 (- (cdr oldcord) (cdr dstcord))))
-          (and
-           (> (cdr oldcord) 4) ;; 已过河
-           (and (equal (cdr oldcord) (cdr dstcord)) (equal 1 (abs (- (car oldcord) (car dstcord)))))))))
+           (> (cdr side-oldcord) 4) ;; 已过河
+           (and (equal (cdr side-oldcord) (cdr side-dstcord)) (equal 1 (abs (- (car side-oldcord) (car side-dstcord)))))))))
 
 (defun chess-cn--kill-rule-bingzu (oldcord dstcord situation)
   "兵卒吃子规则"
   (chess-cn--move-rule-bingzu oldcord dstcord situation))
+
+
+(defun chess-cn--enum-move-or-kill-bingzu (side curt-cord)
+  "枚举兵卒的走法"
+  (chess-cn--keep-if
+   (lambda (dstcord) (if (chess-cn--get-piece-from-situation dstcord) (chess-cn--can-kill-piece curt-cord dstcord) (chess-cn--can-move-piece-p curt-cord dstcord)))
+   (chess-cn--keep-if (lambda (cord) (chess-cn--move-kill-base-rule curt-cord cord))
+                      (list (cons (+ (car curt-cord) 1) (cdr curt-cord))
+                            (cons (- (car curt-cord) 1) (cdr curt-cord))
+                            (cons (car curt-cord) (- (cdr curt-cord) 1))
+                            (cons (car curt-cord) (+ (cdr curt-cord) 1))))))
 
 ;; }}}
 
