@@ -332,13 +332,13 @@ The elements of LIST are not copied, just the list structure itself."
 
 
 ;; 兵种
-(defconst chess-cn--piece-type-ju '(name (chess-cn--side-blue "車" chess-cn--side-red "車") move-rule chess-cn--move-rule-ju kill-rule chess-cn--kill-rule-ju 'enum-rule chess-cn--enum-move-or-kill-ju is-king nil) "")
-(defconst chess-cn--piece-type-ma '(name (chess-cn--side-blue "馬" chess-cn--side-red "馬") move-rule chess-cn--move-rule-ma kill-rule chess-cn--kill-rule-ma 'enum-rule chess-cn--enum-move-or-kill-ma is-king nil) "")
-(defconst chess-cn--piece-type-pao '(name (chess-cn--side-blue "砲" chess-cn--side-red "炮") move-rule chess-cn--move-rule-pao kill-rule chess-cn--kill-rule-pao 'enum-rule chess-cn--enum-move-or-kill-pao is-king nil) "")
-(defconst chess-cn--piece-type-bingzu '(name (chess-cn--side-blue "卒" chess-cn--side-red "兵") move-rule chess-cn--move-rule-bingzu kill-rule chess-cn--kill-rule-bingzu 'enum-rule chess-cn--enum-move-or-kill-bingzu is-king nil) "")
-(defconst chess-cn--piece-type-xiang '(name (chess-cn--side-blue "象" chess-cn--side-red "相") move-rule chess-cn--move-rule-xiang kill-rule chess-cn--kill-rule-xiang 'enum-rule chess-cn--enum-move-or-kill-xiang is-king nil) "")
-(defconst chess-cn--piece-type-shi '(name (chess-cn--side-blue "士" chess-cn--side-red "仕") move-rule chess-cn--move-rule-shi kill-rule chess-cn--kill-rule-shi 'enum-rule chess-cn--enum-move-or-kill-shi is-king nil) "")
-(defconst chess-cn--piece-type-jiangshuai '(name (chess-cn--side-blue "將" chess-cn--side-red "帥") move-rule chess-cn--move-rule-jiangshuai kill-rule chess-cn--kill-rule-jiangshuai 'enum-rule chess-cn--enum-move-or-kill-jiangshuai is-king t) "")
+(defconst chess-cn--piece-type-ju '(name (chess-cn--side-blue "車" chess-cn--side-red "車") move-rule chess-cn--move-rule-ju kill-rule chess-cn--kill-rule-ju enum-rule chess-cn--enum-move-or-kill-ju is-king nil) "")
+(defconst chess-cn--piece-type-ma '(name (chess-cn--side-blue "馬" chess-cn--side-red "馬") move-rule chess-cn--move-rule-ma kill-rule chess-cn--kill-rule-ma enum-rule chess-cn--enum-move-or-kill-ma is-king nil) "")
+(defconst chess-cn--piece-type-pao '(name (chess-cn--side-blue "砲" chess-cn--side-red "炮") move-rule chess-cn--move-rule-pao kill-rule chess-cn--kill-rule-pao enum-rule chess-cn--enum-move-or-kill-pao is-king nil) "")
+(defconst chess-cn--piece-type-bingzu '(name (chess-cn--side-blue "卒" chess-cn--side-red "兵") move-rule chess-cn--move-rule-bingzu kill-rule chess-cn--kill-rule-bingzu enum-rule chess-cn--enum-move-or-kill-bingzu is-king nil) "")
+(defconst chess-cn--piece-type-xiang '(name (chess-cn--side-blue "象" chess-cn--side-red "相") move-rule chess-cn--move-rule-xiang kill-rule chess-cn--kill-rule-xiang enum-rule chess-cn--enum-move-or-kill-xiang is-king nil) "")
+(defconst chess-cn--piece-type-shi '(name (chess-cn--side-blue "士" chess-cn--side-red "仕") move-rule chess-cn--move-rule-shi kill-rule chess-cn--kill-rule-shi enum-rule chess-cn--enum-move-or-kill-shi is-king nil) "")
+(defconst chess-cn--piece-type-jiangshuai '(name (chess-cn--side-blue "將" chess-cn--side-red "帥") move-rule chess-cn--move-rule-jiangshuai kill-rule chess-cn--kill-rule-jiangshuai enum-rule chess-cn--enum-move-or-kill-jiangshuai is-king t) "")
 
 ;; 蓝方棋子
 (defconst chess-cn--piece-blue-jiang '(side chess-cn--side-blue type chess-cn--piece-type-jiangshuai) "蓝将")
@@ -596,13 +596,13 @@ is-move t 为移动, nil 为吃子
   "枚举当前棋局下，指定棋子的所有可能的走法
 
 结果形如 ((oldcord . dstcord) ...)"
-  (let ((curt-cord (plist-get (plist-get chess-cn--playing 'piece-cords) piece-or-cord))
+  (let ((curt-cord (plist-get (plist-get chess-cn--playing 'piece-cords) piece))
         (side (plist-get (symbol-value piece) 'side)))
+    ;;(message "enum-rule of %s is %s" piece (plist-get (symbol-value (plist-get (symbol-value piece) 'type)) 'enum-rule))
     (if curt-cord
-        (mapcar (lambda (dstcord) (cons curt-cord dstcord))
-                (funcall (plist-get (symbol-value (plist-get (symbol-value piece) 'type)) 'enum-threat) side curt-cord))
-      nil))
-  )
+        (mapcar (lambda (dstcord) (list 'piece piece 'oldcord curt-cord 'dstcord dstcord))
+                (funcall (plist-get (symbol-value (plist-get (symbol-value piece) 'type)) 'enum-rule) side curt-cord))
+      nil)))
 
 (defun chess-cn--enum-any-move-or-kill (side)
   "枚举当前棋局下，指定方所有可能的走法
@@ -615,6 +615,7 @@ is-move t 为移动, nil 为吃子
                 (symbolp piece-or-cord)
                 (eq side (plist-get (symbol-value piece-or-cord) 'side))
                 (plist-get (plist-get chess-cn--playing 'piece-cords) piece-or-cord))
+       ;;(message "%s 位置处的 %s 所有可能的走法: %s" (plist-get (plist-get chess-cn--playing 'piece-cords) piece-or-cord) piece-or-cord (chess-cn--enum-any-move-or-kill-of-piece piece-or-cord))
          (chess-cn--enum-any-move-or-kill-of-piece piece-or-cord)))
    nil
    'chess-cn--concat-list)
@@ -624,7 +625,10 @@ is-move t 为移动, nil 为吃子
   "判断指定方是否已经是死局
 
 判断依据是可能的走法列表为空"
-  (not (chess-cn--enum-any-move-or-kill side)))
+  ;;(message "%s 所有可能的走法: %s" (plist-get (symbol-value side) 'name) (chess-cn--enum-any-move-or-kill side))
+  (let ((any-move-or-kill (chess-cn--enum-any-move-or-kill side)))
+    (message "%s 所有可能的走法: %s" (plist-get (symbol-value side) 'name) any-move-or-kill)
+    (not any-move-or-kill)))
   
 
 (defun chess-cn--can-move-piece-p (oldcord dstcord)
@@ -654,7 +658,7 @@ is-move t 为移动, nil 为吃子
         (chess-cn--move-piece oldcord dstcord)
         (when (chess-cn--king-under-threat-p (plist-get chess-cn--playing 'curt-side))
           (message "%s被将军!" (plist-get (symbol-value (plist-get chess-cn--playing 'curt-side)) 'name))
-          (when (chess-cn--dead (symbol-value (plist-get chess-cn--playing 'curt-side)))
+          (when (chess-cn--dead (plist-get chess-cn--playing 'curt-side))
             (plist-put chess-cn--playing 'game-over t) 
             (message (format "对弈结束, %s胜出." (plist-get (symbol-value (plist-get (symbol-value moved-piece) 'side)) 'name))))))
     (message "违反走子规则")))
@@ -688,10 +692,7 @@ is-move t 为移动, nil 为吃子
       (plist-put chess-cn--playing 'curt-selected-cord nil)
       (plist-put chess-cn--playing 'curt-side (chess-cn--get-other-side (plist-get chess-cn--playing 'curt-side)))
       (chess-cn--push-history oldcord dstcord killed-piece) ;; 记录棋步历史
-      (when (plist-get (symbol-value (plist-get (symbol-value killed-piece) 'type)) 'is-king) ;; 被吃掉的棋子是将帅，游戏结束
-          (progn
-            (plist-put chess-cn--playing 'game-over t) 
-            (message (format "对弈结束, %s胜出." (plist-get (symbol-value (plist-get (symbol-value kill-piece) 'side)) 'name))))))))
+      )))
 
 (defun chess-cn--try-kill-piece (oldcord dstcord)
   "在符合吃子规则的前提下，进行吃子操作"
@@ -1077,6 +1078,13 @@ is-move t 为移动, nil 为吃子
   (chess-cn--draw-board-by-situation (plist-get chess-cn--playing 'situation)) ;; 绘制棋盘
   (chess-cn--move-point-to '(0 . 0)) ;; 初始化光标位置
   )
+
+(defun chess-cn--test ()
+  "测试"
+  (interactive)
+  (let* ((cord (chess-cn--position-to-coordinate (point)))
+        (piece-at-point (chess-cn--get-piece-from-situation cord)))
+    (message "%s 的所有可能走法: %s" piece-at-point (chess-cn--enum-any-move-or-kill-of-piece piece-at-point))))
 
 
 (define-derived-mode chinese-chess-cn--mode special-mode "Chinese-Chess"
