@@ -320,8 +320,8 @@ The elements of LIST are not copied, just the list structure itself."
 (defconst chess-cn--buffer-name "*cn-chess*")
 
 ;; 对弈双方
-(defconst chess-cn--side-blue '(name "蓝方" style (:background "blue")))
-(defconst chess-cn--side-red '(name "红方" style (:background "red")))
+(defconst chess-cn--side-blue '(name "蓝方" style (:background "blue" :foreground "white")))
+(defconst chess-cn--side-red '(name "红方" style (:background "red" :foreground "white")))
 
 (defun chess-cn--get-side-by-flag (flag)
   "根据对局方标识获取对局方信息"
