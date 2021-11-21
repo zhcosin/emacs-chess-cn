@@ -579,7 +579,11 @@ is-move t 为移动, nil 为吃子
 (defun chess-cn--try-move-piece (oldcord dstcord)
   "在符合移动规则的前提下，进行走子操作"
   (if (chess-cn--can-move-piece-p oldcord dstcord)
-    (chess-cn--move-piece oldcord dstcord)
+      (progn
+        (chess-cn--move-piece oldcord dstcord)
+        (when (chess-cn--king-under-threat-p (plist-get chess-cn--playing 'curt-side))
+          (message "%s被将军!" (plist-get (symbol-value (plist-get chess-cn--playing 'curt-side)) 'name)))
+        )
     (message "违反走子规则")))
 
 (defun chess-cn--can-kill-piece (oldcord dstcord)
@@ -614,7 +618,11 @@ is-move t 为移动, nil 为吃子
 (defun chess-cn--try-kill-piece (oldcord dstcord)
   "在符合吃子规则的前提下，进行吃子操作"
   (if (chess-cn--can-kill-piece oldcord dstcord)
-      (chess-cn--kill-piece oldcord dstcord)
+      (progn
+        (chess-cn--kill-piece oldcord dstcord)
+        (when (chess-cn--king-under-threat-p (plist-get chess-cn--playing 'curt-side))
+          (message "%s被将军!" (plist-get (symbol-value (plist-get chess-cn--playing 'curt-side)) 'name)))
+        )
     (message "违反吃子规则")))
 
 (defun chess-cn--push-history (oldcord dstcord killed-piece)
