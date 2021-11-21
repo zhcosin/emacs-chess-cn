@@ -418,17 +418,20 @@ The elements of LIST are not copied, just the list structure itself."
 
 (defun chess-cn--move-piece-impl (piece oldcord dstcord)
   "将棋子从棋盘上某位置移动另一位置(无规则判断)"
+  (message "move piece %s from %s to %s" piece oldcord dstcord)
   (chess-cn--set-piece-to-situation dstcord piece)
   (chess-cn--set-piece-to-situation oldcord nil)
   (plist-put (plist-get chess-cn--playing 'piece-cords) piece dstcord))
 
 (defun chess-cn--remove-piece-impl (piece oldcord)
   "从棋盘上移除指定棋子"
+  (message "remove piece %s from %s" piece oldcord)
   (chess-cn--set-piece-to-situation oldcord nil)
   (plist-put (plist-get chess-cn--playing 'piece-cords) piece nil))
 
 (defun chess-cn--restore-piece-impl (piece cord)
   "将棋子恢复到棋盘上指定位置(悔棋时使用)"
+  (message "restore piece %s to %s" piece cord)
   (chess-cn--set-piece-to-situation cord piece)
   (plist-put (plist-get chess-cn--playing 'piece-cords) piece cord))
 
@@ -495,24 +498,62 @@ The elements of LIST are not copied, just the list structure itself."
 oldcord 要走子的棋子坐标
 dstcord 目标位置棋子坐标
 rule-type 规则类型 'move-rule 为移动规则, 'kill-rule 为吃子规则"
+  (message "verify piece type rule %s, %s --> %s" rule-type oldcord dstcord)
   (funcall ;; 棋子规则
         (plist-get (symbol-value (plist-get (chess-cn--get-piece-value-from-situation oldcord) 'type)) rule-type)
         oldcord
         dstcord
         (plist-get chess-cn--playing 'situation)))
 
-(defun chess-cn--king-will-meet-after (oldcord dstcord)
+(defun chess-cn--king-will-meet-after (oldcord dstcord is-move)
   "校验走棋后将帅是否会见面
 
 oldcord 要走子的棋子坐标
 dstcord 目标位置棋子坐标
+is-move t 为移动, nil 为吃子
 "
   (prog2 
-         (chess-cn--move-piece oldcord dstcord) ;; 模拟棋步
-         (chess-cn--king-meet)  ;; 模拟棋步下，将帅是否见面
-         ;;(message "见面: %s" (chess-cn--king-meet))
-         (chess-cn--undo) ;; 撤销模拟棋步
-           ))
+      (if is-move ;; 模拟棋步
+          (chess-cn--move-piece oldcord dstcord)
+        (chess-cn--kill-piece oldcord dstcord))
+      (chess-cn--king-meet)  ;; 模拟棋步下，将帅是否见面
+      ;;(message "见面: %s" (chess-cn--king-meet))
+      (chess-cn--undo) ;; 撤销模拟棋步
+      ))
+
+(defun chess-cn--king-under-threat-p (side)
+  "判断指定方的将/帅是否面临威胁"
+  (let ((king-cord (plist-get
+                    (plist-get chess-cn--playing 'piece-cords)
+                    (if (eq side 'chess-cn--side-red) 'chess-cn--piece-red-shuai 'chess-cn--piece-blue-jiang))))
+  (chess-cn--accumulate
+   (plist-get chess-cn--playing 'piece-cords)
+   (lambda (piece-or-cord)
+     (when (symbolp piece-or-cord) ;; 只处理棋子符号，忽略坐标，达到遍历属性的目的
+       (if (or (null piece-or-cord) (eq side (plist-get (symbol-value piece-or-cord) 'side)))
+          nil ;; 己方棋子对己方将帅无威胁
+          (let ((aginst-cord (plist-get (plist-get chess-cn--playing 'piece-cords) piece-or-cord)))
+            (and
+               ;;(message "compute king-under-thread-p side: %s, piece-or-cord: %s, king-cord: %s aginst-cord: %s" side piece-or-cord king-cord aginst-cord)
+              aginst-cord ;; 坐标为空的棋子为已被吃掉的棋子
+              (chess-cn--move-kill-base-rule aginst-cord king-cord) ;; 棋盘基本规则，不可越界，不可原地踏步
+              (chess-cn--piece-type-rule-verify aginst-cord king-cord 'kill-rule) ;; 兵种吃子规则校验
+              ;;(message "king %s under threat from %s" king-cord aginst-cord)
+              ;; 不再判断是否见面，因为如果通过了吃子规则的话，将帅就已经可被吃了
+           )
+          ))))
+   nil
+   'chess-cn--or-fun))
+  )
+
+(defun chess-cn--king-under-threat-after (oldcord dstcord is-move)
+  "判断走棋后己方将帅是否面临威胁"
+  (prog2
+    (if is-move ;; 模拟棋步
+        (chess-cn--move-piece oldcord dstcord)
+      (chess-cn--kill-piece oldcord dstcord))
+    (chess-cn--king-under-threat-p (plist-get (chess-cn--get-piece-value-from-situation dstcord) 'side))  ;; 模拟棋步下，己方将帅是否面临威胁
+    (chess-cn--undo)))
   
 
 (defun chess-cn--can-move-piece-p (oldcord dstcord)
@@ -520,7 +561,8 @@ dstcord 目标位置棋子坐标
   (and 
        (chess-cn--move-kill-base-rule oldcord dstcord)  ;; 基本规则，不可越界，不可原地踏步
        (chess-cn--piece-type-rule-verify oldcord dstcord 'move-rule) ;; 兵种移动规则校验
-       (not (chess-cn--king-will-meet-after oldcord dstcord)) ;; 走棋后将帅不得见面
+       (not (chess-cn--king-will-meet-after oldcord dstcord t)) ;; 走棋后将帅不得见面
+       (not (chess-cn--king-under-threat-after oldcord dstcord t)) ;; 走棋后不能给己方将帅带来威胁
        ))
 
 (defun chess-cn--move-piece (oldcord dstcord)
@@ -545,7 +587,8 @@ dstcord 目标位置棋子坐标
   (and 
        (chess-cn--move-kill-base-rule oldcord dstcord) ;; 棋盘基本规则，不可越界，不可原地踏步
        (chess-cn--piece-type-rule-verify oldcord dstcord 'kill-rule) ;; 兵种吃子规则校验
-       (not (chess-cn--king-will-meet-after oldcord dstcord)) ;; 走棋后将帅不得见面
+       (not (chess-cn--king-will-meet-after oldcord dstcord nil)) ;; 走棋后将帅不得见面
+       (not (chess-cn--king-under-threat-after oldcord dstcord nil)) ;; 走棋后不能给己方将帅带来威胁
        ))
 
 (defun chess-cn--kill-piece (oldcord dstcord)
