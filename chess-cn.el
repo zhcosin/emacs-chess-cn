@@ -526,7 +526,8 @@ The elements of LIST are not copied, just the list structure itself."
   "选择棋子, 更新当前所选棋子，并将允许走子方设为所选棋子所属方(以应对棋局首步棋)"
   (plist-put chess-cn--playing 'curt-selected-cord cord)
   (plist-put chess-cn--playing 'curt-side (plist-get (symbol-value (chess-cn--get-piece-from-situation cord)) 'side))
-  (chess-cn--step-debug))
+  ;;(chess-cn--step-debug)
+  )
 
 (defun chess-cn--piece-type-rule-verify (oldcord dstcord rule-type)
   "校验走棋是否符合兵种规则
