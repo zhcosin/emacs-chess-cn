@@ -489,21 +489,39 @@ The elements of LIST are not copied, just the list structure itself."
   (plist-put chess-cn--playing 'curt-side (plist-get (symbol-value (chess-cn--get-piece-from-situation cord)) 'side))
   (chess-cn--step-debug))
 
+(defun chess-cn--piece-type-rule-verify (oldcord dstcord rule-type)
+  "校验走棋是否符合兵种规则
+
+oldcord 要走子的棋子坐标
+dstcord 目标位置棋子坐标
+rule-type 规则类型 'move-rule 为移动规则, 'kill-rule 为吃子规则"
+  (funcall ;; 棋子规则
+        (plist-get (symbol-value (plist-get (chess-cn--get-piece-value-from-situation oldcord) 'type)) rule-type)
+        oldcord
+        dstcord
+        (plist-get chess-cn--playing 'situation)))
+
+(defun chess-cn--king-will-meet-after (oldcord dstcord)
+  "校验走棋后将帅是否会见面
+
+oldcord 要走子的棋子坐标
+dstcord 目标位置棋子坐标
+"
+  (prog2 
+         (chess-cn--move-piece oldcord dstcord) ;; 模拟棋步
+         (chess-cn--king-meet)  ;; 模拟棋步下，将帅是否见面
+         ;;(message "见面: %s" (chess-cn--king-meet))
+         (chess-cn--undo) ;; 撤销模拟棋步
+           ))
+  
+
 (defun chess-cn--can-move-piece-p (oldcord dstcord)
   "判断走子是否符合规则"
   (and 
        (chess-cn--move-kill-base-rule oldcord dstcord)  ;; 基本规则，不可越界，不可原地踏步
-       (funcall ;; 棋子规则
-        (plist-get (symbol-value (plist-get (symbol-value (chess-cn--get-piece-from-situation oldcord)) 'type)) 'move-rule)
-        oldcord
-        dstcord
-        (plist-get chess-cn--playing 'situation))
-       (prog2 ;; 将帅是否见面
-         (chess-cn--move-piece oldcord dstcord) ;; 模拟棋步
-         (not (chess-cn--king-meet))  ;; 模拟棋步下，将帅是否见面
-         ;;(message "见面: %s" (chess-cn--king-meet))
-         (chess-cn--undo) ;; 撤销模拟棋步
-           )))
+       (chess-cn--piece-type-rule-verify oldcord dstcord 'move-rule) ;; 兵种移动规则校验
+       (not (chess-cn--king-will-meet-after oldcord dstcord)) ;; 走棋后将帅不得见面
+       ))
 
 (defun chess-cn--move-piece (oldcord dstcord)
   "移动棋子"
@@ -526,17 +544,9 @@ The elements of LIST are not copied, just the list structure itself."
   "判断是否是符合规则的吃子操作"
   (and 
        (chess-cn--move-kill-base-rule oldcord dstcord) ;; 棋盘基本规则，不可越界，不可原地踏步
-       (funcall  ;; 棋子吃子规则
-        (plist-get (symbol-value (plist-get (symbol-value (chess-cn--get-piece-from-situation oldcord)) 'type)) 'kill-rule)
-        oldcord
-        dstcord
-        (plist-get chess-cn--playing 'situation))
-       (prog2 ;; 将帅是否见面
-           (chess-cn--move-piece oldcord dstcord) ;; 模拟棋步
-           (not (chess-cn--king-meet))  ;; 模拟棋步下，将帅是否见面
-         ;;(message "见面: %s" (chess-cn--king-meet))
-           (chess-cn--undo) ;; 撤销模拟棋步
-           )))
+       (chess-cn--piece-type-rule-verify oldcord dstcord 'kill-rule) ;; 兵种吃子规则校验
+       (not (chess-cn--king-will-meet-after oldcord dstcord)) ;; 走棋后将帅不得见面
+       ))
 
 (defun chess-cn--kill-piece (oldcord dstcord)
   "吃子操作"
