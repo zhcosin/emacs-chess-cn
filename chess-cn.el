@@ -627,7 +627,7 @@ is-move t 为移动, nil 为吃子
 判断依据是可能的走法列表为空"
   ;;(message "%s 所有可能的走法: %s" (plist-get (symbol-value side) 'name) (chess-cn--enum-any-move-or-kill side))
   (let ((any-move-or-kill (chess-cn--enum-any-move-or-kill side)))
-    (message "%s 所有可能的走法: %s" (plist-get (symbol-value side) 'name) any-move-or-kill)
+    ;;(message "%s 所有可能的走法: %s" (plist-get (symbol-value side) 'name) any-move-or-kill)
     (not any-move-or-kill)))
   
 
