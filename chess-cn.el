@@ -418,20 +418,20 @@ The elements of LIST are not copied, just the list structure itself."
 
 (defun chess-cn--move-piece-impl (piece oldcord dstcord)
   "将棋子从棋盘上某位置移动另一位置(无规则判断)"
-  (message "move piece %s from %s to %s" piece oldcord dstcord)
+  ;;(message "move piece %s from %s to %s" piece oldcord dstcord)
   (chess-cn--set-piece-to-situation dstcord piece)
   (chess-cn--set-piece-to-situation oldcord nil)
   (plist-put (plist-get chess-cn--playing 'piece-cords) piece dstcord))
 
 (defun chess-cn--remove-piece-impl (piece oldcord)
   "从棋盘上移除指定棋子"
-  (message "remove piece %s from %s" piece oldcord)
+  ;;(message "remove piece %s from %s" piece oldcord)
   (chess-cn--set-piece-to-situation oldcord nil)
   (plist-put (plist-get chess-cn--playing 'piece-cords) piece nil))
 
 (defun chess-cn--restore-piece-impl (piece cord)
   "将棋子恢复到棋盘上指定位置(悔棋时使用)"
-  (message "restore piece %s to %s" piece cord)
+  ;;(message "restore piece %s to %s" piece cord)
   (chess-cn--set-piece-to-situation cord piece)
   (plist-put (plist-get chess-cn--playing 'piece-cords) piece cord))
 
@@ -498,7 +498,7 @@ The elements of LIST are not copied, just the list structure itself."
 oldcord 要走子的棋子坐标
 dstcord 目标位置棋子坐标
 rule-type 规则类型 'move-rule 为移动规则, 'kill-rule 为吃子规则"
-  (message "verify piece type rule %s, %s --> %s" rule-type oldcord dstcord)
+  ;;(message "verify piece type rule %s, %s --> %s" rule-type oldcord dstcord)
   (funcall ;; 棋子规则
         (plist-get (symbol-value (plist-get (chess-cn--get-piece-value-from-situation oldcord) 'type)) rule-type)
         oldcord
