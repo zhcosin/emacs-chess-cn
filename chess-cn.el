@@ -287,19 +287,21 @@ The elements of LIST are not copied, just the list structure itself."
     (setq the-situation (cdr the-situation)))
   (setq buffer-read-only t)) ;; 切换棋局下一行
 
-(defun chess-cn--put-piece-to-board (row-situation board-row-str)
+(defun chess-cn--put-piece-to-board (row col row-situation board-row-str)
   "将棋局的一行输出到棋盘上的一行上"
   (let* ((board-row-str-len (length board-row-str))
-             (max-width (if (< chess-cn--board-grid-width board-row-str-len) chess-cn--board-grid-width board-row-str-len)))
+         (max-width (if (< chess-cn--board-grid-width board-row-str-len) chess-cn--board-grid-width board-row-str-len))
+         (is-selected-piece (equal (cons col row) (plist-get chess-cn--playing 'curt-selected-cord))))
     (if row-situation
         (concat
          (if
            (car row-situation) ;; 有棋子
            (concat
-             (propertize (chess-cn--get-piece-name (car row-situation)) 'font-lock-face (chess-cn--get-piece-face (car row-situation)))
+            (propertize (chess-cn--get-piece-name (car row-situation)) 'font-lock-face
+                        (if is-selected-piece (chess-cn--get-piece-selected-face (car row-situation)) (chess-cn--get-piece-face (car row-situation))))
              (substring board-row-str 2 max-width))
            (substring board-row-str 0 max-width))
-         (chess-cn--put-piece-to-board (cdr row-situation) (substring board-row-str max-width)))
+         (chess-cn--put-piece-to-board row (1+ col) (cdr row-situation) (substring board-row-str max-width)))
       board-row-str)))
 
 (defun chess-cn--draw-board-by-situation (the-situation)
@@ -312,7 +314,7 @@ The elements of LIST are not copied, just the list structure itself."
     (while (< i (length board-arr))
       (insert (concat (make-string chess-cn--board-grid-offsetset ? )
                       (if (= 0 (% i 3))
-          (chess-cn--put-piece-to-board (nth (/ i 3) the-situation) (nth i board-arr))
+          (chess-cn--put-piece-to-board (/ i 3) 0 (nth (/ i 3) the-situation) (nth i board-arr))
         (nth i board-arr)) "\n"))
       (setq i (1+ i))))
   (setq buffer-read-only t))
@@ -324,8 +326,8 @@ The elements of LIST are not copied, just the list structure itself."
 (defconst chess-cn--buffer-name "*cn-chess*")
 
 ;; 对弈双方
-(defconst chess-cn--side-blue '(name "蓝方" style (:background "blue" :foreground "white")))
-(defconst chess-cn--side-red '(name "红方" style (:background "red" :foreground "white")))
+(defconst chess-cn--side-blue '(name "蓝方" style (:background "blue" :foreground "white") selected-style (:background "white" :foreground "blue")))
+(defconst chess-cn--side-red '(name "红方" style (:background "red" :foreground "white") selected-style (:background "white" :foreground "red")))
 
 (defun chess-cn--get-side-by-flag (flag)
   "根据对局方标识获取对局方信息"
@@ -425,6 +427,10 @@ The elements of LIST are not copied, just the list structure itself."
 (defun chess-cn--get-piece-face (chess-cn--piece)
   "获取棋子用于显示的文本属性"
   (plist-get (symbol-value (plist-get (symbol-value chess-cn--piece) 'side)) 'style))
+
+(defun chess-cn--get-piece-selected-face (chess-cn--piece)
+  "获取棋子用于显示的文本属性"
+  (plist-get (symbol-value (plist-get (symbol-value chess-cn--piece) 'side)) 'selected-style))
 
 (defun chess-cn--copy-init-situation (chess-cn--init-situation)
   "深拷贝初始棋局"
