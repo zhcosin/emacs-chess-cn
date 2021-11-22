@@ -55,6 +55,10 @@
 ;; 
 ;;
 
+
+
+;;; Code
+
 ;; 启用 font-lock 时设置文本外观应使用 font-lock-face 文本属性，未启用 font-lock 时应使用 face 属性.
 
 ;; {{{ 辅助函数
