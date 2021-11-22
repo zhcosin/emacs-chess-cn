@@ -404,6 +404,7 @@ The elements of LIST are not copied, just the list structure itself."
                             situation nil                     ;; 当前棋局矩阵
                             piece-cords nil                   ;; 棋子坐标列表
                             history nil                       ;; 棋步历史
+                            prompt nil                        ;; 提示信息
                             )
   "对弈信息，包括对弈是否已结束、当前走子方、当前所选棋子的坐标、当前棋局(10x9二维棋子矩阵)")
 (defun chess-cn--playing-init ()
@@ -639,15 +640,20 @@ is-move t 为移动, nil 为吃子
   (let ((any-move-or-kill (chess-cn--enum-any-move-or-kill side)))
     ;;(message "%s 所有可能的走法: %s" (plist-get (symbol-value side) 'name) any-move-or-kill)
     (not any-move-or-kill)))
+
+(defun chess-cn--set-prompt-if-false (test msg)
+  "如果测试条件不成立，设置错误提示信息，并返回测试条件结果"
+  (unless test (plist-put chess-cn--playing 'prompt msg))
+  test)
   
 
 (defun chess-cn--can-move-piece-p (oldcord dstcord)
   "判断走子是否符合规则"
   (and 
-       (chess-cn--move-kill-base-rule oldcord dstcord)  ;; 基本规则，不可越界，不可原地踏步
-       (chess-cn--piece-type-rule-verify oldcord dstcord 'move-rule) ;; 兵种移动规则校验
-       (not (chess-cn--king-will-meet-after oldcord dstcord t)) ;; 走棋后将帅不得见面
-       (not (chess-cn--king-under-threat-after oldcord dstcord t)) ;; 走棋后己方将帅不能面临威胁
+       (chess-cn--set-prompt-if-false (chess-cn--move-kill-base-rule oldcord dstcord) "不能越界和原地踏步")  ;; 基本规则，不可越界，不可原地踏步
+       (chess-cn--set-prompt-if-false (chess-cn--piece-type-rule-verify oldcord dstcord 'move-rule) "违反棋子移动规则") ;; 兵种移动规则校验
+       (chess-cn--set-prompt-if-false (not (chess-cn--king-will-meet-after oldcord dstcord t)) "将帅不得见面") ;; 走棋后将帅不得见面
+       (chess-cn--set-prompt-if-false (not (chess-cn--king-under-threat-after oldcord dstcord t)) "被将军") ;; 走棋后己方将帅不能面临威胁
        ))
 
 (defun chess-cn--move-piece (oldcord dstcord)
@@ -671,20 +677,22 @@ is-move t 为移动, nil 为吃子
           (when (chess-cn--dead (plist-get chess-cn--playing 'curt-side))
             (plist-put chess-cn--playing 'game-over t) 
             (message (format "对弈结束, %s胜出." (plist-get (symbol-value (plist-get (symbol-value moved-piece) 'side)) 'name))))))
-    (message "违反走子规则")))
+    (let ((prompt-msg (plist-get chess-cn--playing 'prompt)))
+      (plist-put chess-cn--playing 'prompt nil)
+      (message (if prompt-msg prompt-msg "违反走子规则")))))
 
 (defun chess-cn--can-kill-piece (oldcord dstcord)
   "判断是否是符合规则的吃子操作"
   (let ((kill-piece (chess-cn--get-piece-from-situation oldcord))
          (killed-piece (chess-cn--get-piece-from-situation dstcord)))
     (and 
-       (chess-cn--move-kill-base-rule oldcord dstcord) ;; 棋盘基本规则，不可越界，不可原地踏步
+       (chess-cn--set-prompt-if-false (chess-cn--move-kill-base-rule oldcord dstcord) "不能越界和原地踏步") ;; 棋盘基本规则，不可越界，不可原地踏步
        kill-piece ;; 原始位置有棋子
        killed-piece ;; 目标位置有棋子
-       (not (equal (plist-get (symbol-value kill-piece) 'side) (plist-get (symbol-value killed-piece) 'side))) ;; 原始位置位置及目标位置处的棋子不同属一方
-       (chess-cn--piece-type-rule-verify oldcord dstcord 'kill-rule) ;; 兵种吃子规则校验
-       (not (chess-cn--king-will-meet-after oldcord dstcord nil)) ;; 走棋后将帅不得见面
-       (not (chess-cn--king-under-threat-after oldcord dstcord nil)) ;; 走棋后己方将帅不能面临威胁
+       (chess-cn--set-prompt-if-false (not (equal (plist-get (symbol-value kill-piece) 'side) (plist-get (symbol-value killed-piece) 'side))) "不能吃己方棋子") ;; 原始位置位置及目标位置处的棋子不同属一方
+       (chess-cn--set-prompt-if-false (chess-cn--piece-type-rule-verify oldcord dstcord 'kill-rule) "不符合棋子吃子规则") ;; 兵种吃子规则校验
+       (chess-cn--set-prompt-if-false (not (chess-cn--king-will-meet-after oldcord dstcord nil)) "将帅不得见面") ;; 走棋后将帅不得见面
+       (chess-cn--set-prompt-if-false (not (chess-cn--king-under-threat-after oldcord dstcord nil)) "被将军") ;; 走棋后己方将帅不能面临威胁
        )))
 
 (defun chess-cn--kill-piece (oldcord dstcord)
@@ -715,7 +723,9 @@ is-move t 为移动, nil 为吃子
             (plist-put chess-cn--playing 'game-over t) 
             (message (format "对弈结束, %s胜出." (plist-get (symbol-value (plist-get (symbol-value moved-piece) 'side)) 'name)))))
         )
-    (message "违反吃子规则")))
+    (let ((prompt-msg (plist-get chess-cn--playing 'prompt)))
+      (plist-put chess-cn--playing 'prompt nil)
+      (message (if prompt-msg prompt-msg "违反吃子规则")))))
 
 (defun chess-cn--push-history (oldcord dstcord killed-piece)
   "记录棋步历史,killed-piece 为被吃子(符号)"
