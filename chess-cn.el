@@ -129,10 +129,19 @@ The elements of LIST are not copied, just the list structure itself."
    (when keep-right (list (max a b)))))
 
 ;; 通用累加器
-(defun chess-cn--accumulate (li processor init-value accumulator)
-  "累加器"
+(defun chess-cn--accumulate (li processor init-value accumulator &optional short-testor)
+  "累加器
+
+遍历列表 li，针对每个元素 item 调用 (processor item) 得到结果，
+然后利用二元累加函数 (accumulator x y) 把这些结果累加起来, 
+第一次累加时使用初值 init-value 参与运算，即 (accumulator init-value (processor (car li)))，
+每次调用累加函数后利用短路条件 (short-testor y) 对现有累加结果进行判断，
+如果它成立则不再遍历剩余元素，直接返回现有累加结果."
   ;;(message (format "accumulate for list %s with initial value %s by elemente processor %s and accumulator %s" li init-value processor accumulator))
-  (if li
+  (if (and li
+           (not
+            (and short-testor
+                 (funcall short-testor init-value))))
       (chess-cn--accumulate (cdr li) processor (funcall accumulator init-value (funcall processor (car li))) accumulator)
     init-value))
 
@@ -591,7 +600,8 @@ is-move t 为移动, nil 为吃子
            )
           ))))
    nil
-   'chess-cn--or-fun))
+   'chess-cn--or-fun
+   'identity))
   )
 
 (defun chess-cn--king-under-threat-after (oldcord dstcord is-move)
@@ -815,7 +825,8 @@ is-move t 为移动, nil 为吃子
       nil)
      (lambda (cord) (chess-cn--get-piece-from-situation cord))
      nil 
-     'chess-cn--or-fun))))
+     'chess-cn--or-fun
+     'identity))))
 
 (defun chess-cn--kill-rule-ju (oldcord dstcord situation)
   "车的吃子规则，与移动规则相同"
@@ -879,7 +890,8 @@ is-move t 为移动, nil 为吃子
       0)
      (lambda (cord) (if (chess-cn--get-piece-from-situation cord) 1 0))
      0 
-     '+))))
+     '+
+     (lambda (x) (> x 1))))))
 
 (defun chess-cn--enum-move-or-kill-pao (side curt-cord)
   "枚举炮的走法"
