@@ -725,13 +725,14 @@ is-move t 为移动, nil 为吃子
 (defun chess-cn--try-kill-piece (oldcord dstcord)
   "在符合吃子规则的前提下，进行吃子操作"
   (if (chess-cn--can-kill-piece oldcord dstcord)
-      (progn
+      (let ((kill-piece (chess-cn--get-piece-from-situation oldcord))
+           (killed-piece (chess-cn--get-piece-from-situation dstcord)))
         (chess-cn--kill-piece oldcord dstcord)
         (when (chess-cn--king-under-threat-p (plist-get chess-cn--playing 'curt-side))
           (message "%s被将军!" (plist-get (symbol-value (plist-get chess-cn--playing 'curt-side)) 'name))
           (when (chess-cn--dead (symbol-value (plist-get chess-cn--playing 'curt-side)))
             (plist-put chess-cn--playing 'game-over t) 
-            (message (format "对弈结束, %s胜出." (plist-get (symbol-value (plist-get (symbol-value moved-piece) 'side)) 'name)))))
+            (message (format "对弈结束, %s胜出." (plist-get (symbol-value (plist-get (symbol-value kill-piece) 'side)) 'name)))))
         )
     (let ((prompt-msg (plist-get chess-cn--playing 'prompt)))
       (plist-put chess-cn--playing 'prompt nil)
