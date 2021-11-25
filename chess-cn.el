@@ -475,6 +475,7 @@ The elements of LIST are not copied, just the list structure itself."
 (defun chess-cn--move-piece-impl (piece oldcord dstcord)
   "将棋子从棋盘上某位置移动另一位置(无规则判断)"
   ;;(message "move piece %s from %s to %s" piece oldcord dstcord)
+  (unless piece (error "move nil"))
   (chess-cn--set-piece-to-situation dstcord piece)
   (chess-cn--set-piece-to-situation oldcord nil)
   (plist-put (plist-get chess-cn--playing 'piece-cords) piece dstcord))
@@ -482,12 +483,14 @@ The elements of LIST are not copied, just the list structure itself."
 (defun chess-cn--remove-piece-impl (piece oldcord)
   "从棋盘上移除指定棋子"
   ;;(message "remove piece %s from %s" piece oldcord)
+  (unless piece (error "remove nil"))
   (chess-cn--set-piece-to-situation oldcord nil)
   (plist-put (plist-get chess-cn--playing 'piece-cords) piece nil))
 
 (defun chess-cn--restore-piece-impl (piece cord)
   "将棋子恢复到棋盘上指定位置(悔棋时使用)"
   ;;(message "restore piece %s to %s" piece cord)
+  (unless piece (error "restore nil"))
   (chess-cn--set-piece-to-situation cord piece)
   (plist-put (plist-get chess-cn--playing 'piece-cords) piece cord))
 
@@ -632,11 +635,12 @@ is-move t 为移动, nil 为吃子
   (chess-cn--accumulate
    (plist-get chess-cn--playing 'piece-cords)
    (lambda (piece-or-cord)
+     (message "计算 %s 位置处的 %s 的走法列表" (plist-get (plist-get chess-cn--playing 'piece-cords) piece-or-cord) piece-or-cord)
      (when (and piece-or-cord
                 (symbolp piece-or-cord)
                 (eq side (plist-get (symbol-value piece-or-cord) 'side))
                 (plist-get (plist-get chess-cn--playing 'piece-cords) piece-or-cord))
-       ;;(message "%s 位置处的 %s 所有可能的走法: %s" (plist-get (plist-get chess-cn--playing 'piece-cords) piece-or-cord) piece-or-cord (chess-cn--enum-any-move-or-kill-of-piece piece-or-cord))
+       (message "%s 位置处的 %s 所有可能的走法: %s" (plist-get (plist-get chess-cn--playing 'piece-cords) piece-or-cord) piece-or-cord (chess-cn--enum-any-move-or-kill-of-piece piece-or-cord))
          (chess-cn--enum-any-move-or-kill-of-piece piece-or-cord)))
    nil
    'chess-cn--concat-list)
@@ -1078,10 +1082,11 @@ is-move t 为移动, nil 为吃子
         ;;(plist-put (plist-get chess-cn--playing 'piece-cords) kill-piece (plist-get last-history 'oldcord))
         ;;(chess-cn--set-piece-to-situation (plist-get last-history 'oldcord) kill-piece)
         (chess-cn--move-piece-impl kill-piece (plist-get last-history 'dstcord) (plist-get last-history 'oldcord)) 
-        ;; 恢复被吃子到棋盘上
+        ;; 如果有吃子，恢复被吃子到棋盘上
         ;;(plist-put (plist-get chess-cn--playing 'piece-cords) killed-piece (plist-get last-history 'dstcord))
         ;;(chess-cn--set-piece-to-situation (plist-get last-history 'dstcord) killed-piece))
-        (chess-cn--restore-piece-impl killed-piece (plist-get last-history 'dstcord)))
+        (when killed-piece
+          (chess-cn--restore-piece-impl killed-piece (plist-get last-history 'dstcord))))
       (chess-cn--draw-board-by-situation (plist-get chess-cn--playing 'situation)) ;; 绘制棋盘
         (chess-cn--move-point-to '(0 . 0))))) ;; 初始化光标位置
 
