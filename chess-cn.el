@@ -635,12 +635,12 @@ is-move t 为移动, nil 为吃子
   (chess-cn--accumulate
    (plist-get chess-cn--playing 'piece-cords)
    (lambda (piece-or-cord)
-     (message "计算 %s 位置处的 %s 的走法列表" (plist-get (plist-get chess-cn--playing 'piece-cords) piece-or-cord) piece-or-cord)
+     ;;(message "计算 %s %s 位置处的 %s 的走法列表" side (plist-get (plist-get chess-cn--playing 'piece-cords) piece-or-cord) piece-or-cord)
      (when (and piece-or-cord
                 (symbolp piece-or-cord)
                 (eq side (plist-get (symbol-value piece-or-cord) 'side))
                 (plist-get (plist-get chess-cn--playing 'piece-cords) piece-or-cord))
-       (message "%s 位置处的 %s 所有可能的走法: %s" (plist-get (plist-get chess-cn--playing 'piece-cords) piece-or-cord) piece-or-cord (chess-cn--enum-any-move-or-kill-of-piece piece-or-cord))
+       ;;(message "%s 位置处的 %s 所有可能的走法: %s" (plist-get (plist-get chess-cn--playing 'piece-cords) piece-or-cord) piece-or-cord (chess-cn--enum-any-move-or-kill-of-piece piece-or-cord))
          (chess-cn--enum-any-move-or-kill-of-piece piece-or-cord)))
    nil
    'chess-cn--concat-list)
@@ -734,7 +734,7 @@ is-move t 为移动, nil 为吃子
         (chess-cn--kill-piece oldcord dstcord)
         (when (chess-cn--king-under-threat-p (plist-get chess-cn--playing 'curt-side))
           (message "%s被将军!" (plist-get (symbol-value (plist-get chess-cn--playing 'curt-side)) 'name))
-          (when (chess-cn--dead (symbol-value (plist-get chess-cn--playing 'curt-side)))
+          (when (chess-cn--dead (plist-get chess-cn--playing 'curt-side))
             (plist-put chess-cn--playing 'game-over t) 
             (message (format "对弈结束, %s胜出." (plist-get (symbol-value (plist-get (symbol-value kill-piece) 'side)) 'name)))))
         )
