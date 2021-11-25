@@ -90,6 +90,19 @@ The elements of LIST are not copied, just the list structure itself."
 	(prog1 (nreverse res) (setcdr res list)))
     (car list)))
 
+(defun chess-cn--copy-vector (vec ele-copy-fun)
+  "复制数组，并返回复制的数组"
+  (unless (arrayp vec)
+    (error "failed to copy vector, parameter is not a vector"))
+  (let ((copied (make-vector (length vec) nil))
+        (len-vec (length vec))
+        (index 0))
+    (while (< index (length vec))
+      (aset copied index (funcall ele-copy-fun (aref vec index)))
+      (setq index (1+ index)))
+    copied))
+
+
 (defun chess-cn--concat-list-2 (list1 list2)
   "拼接列表，返回两个结果拼接结果，不保证顺序"
   (if list1
@@ -231,24 +244,24 @@ The elements of LIST are not copied, just the list structure itself."
        (>= (cdr cord) 0)
        (<= (cdr cord) 9)
        (let ((row 0) (col 0) (pos chess-cn--board-start))
-         (let ((board-at-row (nth row (plist-get chess-cn--playing 'situation))))
+         (let ((board-at-row (aref (plist-get chess-cn--playing 'situation) row)))
            (while (< row (cdr cord))
-             (setq board-at-row (nth row (plist-get chess-cn--playing 'situation)))
+             (setq board-at-row (aref (plist-get chess-cn--playing 'situation) row))
              (setq pos (+ pos chess-cn--board-grid-offsetset)) ;; 棋盘左侧偏移
              (while (< col 9)
                ;; 若 (col . row) 处有棋子，则增加 chess-cn--board-grid-width - 1 个位置，否则 增加 chess-cn--board-grid-width 个位置
-               (setq pos (+ pos (if (null (nth col board-at-row)) (if (= col 8) 2 chess-cn--board-grid-width) (if (= col 8) 1 (1- chess-cn--board-grid-width)))))
+               (setq pos (+ pos (if (null (aref board-at-row col)) (if (= col 8) 2 chess-cn--board-grid-width) (if (= col 8) 1 (1- chess-cn--board-grid-width)))))
                (setq col (1+ col)))  
              (setq pos (1+ pos))  ;; 换行符占据一个位置
              (setq pos (+ pos (* chess-cn--board-grid-offsetset (1- chess-cn--board-grid-high)))) ;; 棋盘左侧偏移(棋盘方格调试纯字符行)
              (setq pos (+ pos (* (1- chess-cn--board-grid-high) (+ 3 (* chess-cn--board-grid-width 8))))) ;; 棋盘方格高度产生的纯字符行，加上末尾的棋子位置(2个字符)和1个换行符.
              (setq row (1+ row))
              (setq col 0))
-           (setq board-at-row (nth row (plist-get chess-cn--playing 'situation)))
+           (setq board-at-row (aref (plist-get chess-cn--playing 'situation) row))
            (setq pos (+ pos chess-cn--board-grid-offsetset)) ;; 棋盘左侧偏移
            (while (< col (car cord))
                ;; 若 (col . row) 处有棋子，则增加 chess-cn--board-grid-width - 1 个位置，否则 增加 chess-cn--board-grid-width 个位置
-               (setq pos (+ pos (if (null (nth col board-at-row)) (if (= col 8) 2 chess-cn--board-grid-width) (if (= col 8) 1 (1- chess-cn--board-grid-width)))))
+               (setq pos (+ pos (if (null (aref board-at-row col)) (if (= col 8) 2 chess-cn--board-grid-width) (if (= col 8) 1 (1- chess-cn--board-grid-width)))))
                (setq col (1+ col)))
            )
          pos)))
@@ -301,16 +314,16 @@ The elements of LIST are not copied, just the list structure itself."
   (let* ((board-row-str-len (length board-row-str))
          (max-width (if (< chess-cn--board-grid-width board-row-str-len) chess-cn--board-grid-width board-row-str-len))
          (is-selected-piece (equal (cons col row) (plist-get chess-cn--playing 'curt-selected-cord))))
-    (if row-situation
+    (if (< col (length row-situation))
         (concat
          (if
-           (car row-situation) ;; 有棋子
+           (aref row-situation col) ;; 有棋子
            (concat
-            (propertize (chess-cn--get-piece-name (car row-situation)) 'font-lock-face
-                        (if is-selected-piece (chess-cn--get-piece-selected-face (car row-situation)) (chess-cn--get-piece-face (car row-situation))))
+            (propertize (chess-cn--get-piece-name (aref row-situation col)) 'font-lock-face
+                        (if is-selected-piece (chess-cn--get-piece-selected-face (aref row-situation col)) (chess-cn--get-piece-face (aref row-situation col))))
              (substring board-row-str 2 max-width))
            (substring board-row-str 0 max-width))
-         (chess-cn--put-piece-to-board row (1+ col) (cdr row-situation) (substring board-row-str max-width)))
+         (chess-cn--put-piece-to-board row (1+ col) row-situation (substring board-row-str max-width)))
       board-row-str)))
 
 (defun chess-cn--draw-board-by-situation (the-situation)
@@ -323,7 +336,7 @@ The elements of LIST are not copied, just the list structure itself."
     (while (< i (length board-arr))
       (insert (concat (make-string chess-cn--board-grid-offsetset ? )
                       (if (= 0 (% i 3))
-          (chess-cn--put-piece-to-board (/ i 3) 0 (nth (/ i 3) the-situation) (nth i board-arr))
+          (chess-cn--put-piece-to-board (/ i 3) 0 (aref the-situation (/ i 3)) (nth i board-arr))
         (nth i board-arr)) "\n"))
       (setq i (1+ i))))
   (setq buffer-read-only t))
@@ -392,18 +405,18 @@ The elements of LIST are not copied, just the list structure itself."
 (defconst chess-cn--piece-red-bing-5 '(side chess-cn--side-red type chess-cn--piece-type-bingzu) "红卒5")
 
 (defconst chess-cn--init-situation
-  '(
-   (chess-cn--piece-blue-ju-1 chess-cn--piece-blue-ma-1 chess-cn--piece-blue-xiang-1 chess-cn--piece-blue-shi-1 chess-cn--piece-blue-jiang chess-cn--piece-blue-shi-2 chess-cn--piece-blue-xiang-2 chess-cn--piece-blue-ma-2 chess-cn--piece-blue-ju-2)
-   (nil nil nil nil nil nil nil nil nil)
-   (nil chess-cn--piece-blue-pao-1 nil nil nil nil nil chess-cn--piece-blue-pao-2 nil)
-   (chess-cn--piece-blue-zu-1 nil chess-cn--piece-blue-zu-2 nil chess-cn--piece-blue-zu-3 nil chess-cn--piece-blue-zu-4 nil chess-cn--piece-blue-zu-5)
-   (nil nil nil nil nil nil nil nil nil)
-   (nil nil nil nil nil nil nil nil nil)
-   (chess-cn--piece-red-bing-1 nil chess-cn--piece-red-bing-2 nil chess-cn--piece-red-bing-3 nil chess-cn--piece-red-bing-4 nil chess-cn--piece-red-bing-5)
-   (nil chess-cn--piece-red-pao-1 nil nil nil nil nil chess-cn--piece-red-pao-2 nil)
-   (nil nil nil nil nil nil nil nil nil)
-   (chess-cn--piece-red-ju-1 chess-cn--piece-red-ma-1 chess-cn--piece-red-xiang-1 chess-cn--piece-red-shi-1 chess-cn--piece-red-shuai chess-cn--piece-red-shi-2 chess-cn--piece-red-xiang-2 chess-cn--piece-red-ma-2 chess-cn--piece-red-ju-2)
-   )
+  [
+   [chess-cn--piece-blue-ju-1 chess-cn--piece-blue-ma-1 chess-cn--piece-blue-xiang-1 chess-cn--piece-blue-shi-1 chess-cn--piece-blue-jiang chess-cn--piece-blue-shi-2 chess-cn--piece-blue-xiang-2 chess-cn--piece-blue-ma-2 chess-cn--piece-blue-ju-2]
+   [nil nil nil nil nil nil nil nil nil]
+   [nil chess-cn--piece-blue-pao-1 nil nil nil nil nil chess-cn--piece-blue-pao-2 nil]
+   [chess-cn--piece-blue-zu-1 nil chess-cn--piece-blue-zu-2 nil chess-cn--piece-blue-zu-3 nil chess-cn--piece-blue-zu-4 nil chess-cn--piece-blue-zu-5]
+   [nil nil nil nil nil nil nil nil nil]
+   [nil nil nil nil nil nil nil nil nil]
+   [chess-cn--piece-red-bing-1 nil chess-cn--piece-red-bing-2 nil chess-cn--piece-red-bing-3 nil chess-cn--piece-red-bing-4 nil chess-cn--piece-red-bing-5]
+   [nil chess-cn--piece-red-pao-1 nil nil nil nil nil chess-cn--piece-red-pao-2 nil]
+   [nil nil nil nil nil nil nil nil nil]
+   [chess-cn--piece-red-ju-1 chess-cn--piece-red-ma-1 chess-cn--piece-red-xiang-1 chess-cn--piece-red-shi-1 chess-cn--piece-red-shuai chess-cn--piece-red-shi-2 chess-cn--piece-red-xiang-2 chess-cn--piece-red-ma-2 chess-cn--piece-red-ju-2]
+   ]
   "初始棋局")
 
 (defvar chess-cn--playing '(
@@ -445,9 +458,8 @@ The elements of LIST are not copied, just the list structure itself."
 (defun chess-cn--copy-init-situation (chess-cn--init-situation)
   "深拷贝初始棋局"
   (if chess-cn--init-situation
-      (cons (chess-cn--copy-list (car chess-cn--init-situation)) (chess-cn--copy-init-situation (cdr chess-cn--init-situation)))
-    nil)
-  )
+      (chess-cn--copy-vector chess-cn--init-situation (lambda (ele-vec) (chess-cn--copy-vector ele-vec 'identity)))
+    nil))
 
 (defun chess-cn--inner-cord-to-side (side cord)
   "坐标转换，内部坐标转指定对弈方的坐标，内部坐标与蓝方坐标一致"
@@ -461,7 +473,7 @@ The elements of LIST are not copied, just the list structure itself."
 
 (defun chess-cn--get-piece-from-situation (cord)
   "根据坐标获取棋局上的棋子(符号)"
-  (when cord (nth (car cord) (nth (cdr cord) (plist-get chess-cn--playing 'situation)))))
+  (when cord (aref (aref (plist-get chess-cn--playing 'situation) (cdr cord)) (car cord))))
 
 (defun chess-cn--get-piece-value-from-situation (cord)
   "根据坐标获取棋局上的棋子(值)"
@@ -470,7 +482,7 @@ The elements of LIST are not copied, just the list structure itself."
 
 (defun chess-cn--set-piece-to-situation (cord piece)
   "根据坐标设置棋子(符号)"
-  (setf (nth (car cord) (nth (cdr cord) (plist-get chess-cn--playing 'situation))) piece))
+  (setf (aref (aref (plist-get chess-cn--playing 'situation) (cdr cord)) (car cord)) piece))
 
 (defun chess-cn--move-piece-impl (piece oldcord dstcord)
   "将棋子从棋盘上某位置移动另一位置(无规则判断)"
