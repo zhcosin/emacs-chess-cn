@@ -142,7 +142,7 @@ The elements of LIST are not copied, just the list structure itself."
    (when keep-right (list (max a b)))))
 
 ;; 通用累加器
-(defun chess-cn--accumulate (li processor init-value accumulator &optional short-testor)
+(defun chess-cn--accumulate-list (li processor init-value accumulator &optional short-testor)
   "累加器
 
 遍历列表 li，针对每个元素 item 调用 (processor item) 得到结果，
@@ -155,8 +155,25 @@ The elements of LIST are not copied, just the list structure itself."
            (not
             (and short-testor
                  (funcall short-testor init-value))))
-      (chess-cn--accumulate (cdr li) processor (funcall accumulator init-value (funcall processor (car li))) accumulator)
+      (chess-cn--accumulate-list (cdr li) processor (funcall accumulator init-value (funcall processor (car li))) accumulator)
     init-value))
+
+;; 通用累加器
+(defun chess-cn--accumulate-hashtab (table pairprocessor init-value accumulator &optional short-testor)
+  "累加器
+
+遍历 hashtable table，针对每个元素 item 调用 (pairprocessor k v) 得到结果，
+然后利用二元累加函数 (accumulator x y) 把这些结果累加起来, 
+第一次累加时使用初值 init-value 参与运算，即 (accumulator init-value (pairprocessor k v))，
+每次调用累加函数后利用短路条件 (short-testor y) 对现有累加结果进行判断，
+如果它成立则不再遍历剩余元素，直接返回现有累加结果."
+  (chess-cn--accumulate-list
+   (hash-table-keys table)
+   (lambda (key) (funcall pairprocessor key (gethash key table)))
+   init-value
+   accumulator
+   short-testor))
+
 
 (defun chess-cn--coordinate-cycle (cord xinc yinc)
   "棋盘坐标增量计算，超出范围则取余循环"
@@ -490,21 +507,21 @@ The elements of LIST are not copied, just the list structure itself."
   (unless piece (error "move nil"))
   (chess-cn--set-piece-to-situation dstcord piece)
   (chess-cn--set-piece-to-situation oldcord nil)
-  (plist-put (plist-get chess-cn--playing 'piece-cords) piece dstcord))
+  (puthash piece dstcord (plist-get chess-cn--playing 'piece-cords)))
 
 (defun chess-cn--remove-piece-impl (piece oldcord)
   "从棋盘上移除指定棋子"
   ;;(message "remove piece %s from %s" piece oldcord)
   (unless piece (error "remove nil"))
   (chess-cn--set-piece-to-situation oldcord nil)
-  (plist-put (plist-get chess-cn--playing 'piece-cords) piece nil))
+  (puthash piece nil (plist-get chess-cn--playing 'piece-cords)))
 
 (defun chess-cn--restore-piece-impl (piece cord)
   "将棋子恢复到棋盘上指定位置(悔棋时使用)"
   ;;(message "restore piece %s to %s" piece cord)
   (unless piece (error "restore nil"))
   (chess-cn--set-piece-to-situation cord piece)
-  (plist-put (plist-get chess-cn--playing 'piece-cords) piece cord))
+  (puthash piece cord (plist-get chess-cn--playing 'piece-cords)))
 
 
 (defun chess-cn--get-other-side (side)
@@ -513,7 +530,7 @@ The elements of LIST are not copied, just the list structure itself."
 
 (defun chess-cn--get-piece-cords-by-scan-situation ()
   "通过扫描一遍棋局，生成所有棋子坐标属性列表"
-  (let ((piece-cords nil)
+  (let ((piece-cords (make-hash-table :test 'eq))
         (x 0)
         (y 0)
         (piece))
@@ -522,7 +539,7 @@ The elements of LIST are not copied, just the list structure itself."
       (while (< x 9)
         (setq piece (chess-cn--get-piece-from-situation (cons x y)))
         (when piece
-          (setq piece-cords (cons piece (cons (cons x y) piece-cords))))
+          (puthash piece (cons x y) piece-cords))
         (setq x (1+ x)))
       (setq y (1+ y)))
     piece-cords))
@@ -544,12 +561,12 @@ The elements of LIST are not copied, just the list structure itself."
 
 (defun chess-cn--king-meet ()
   "判断当前棋局，将帅是否碰面"
-  (let ((blue-jiang-cord (plist-get (plist-get chess-cn--playing 'piece-cords) 'chess-cn--piece-blue-jiang))
-        (red-shuai-cord (plist-get (plist-get chess-cn--playing 'piece-cords) 'chess-cn--piece-red-shuai)))
+  (let ((blue-jiang-cord (gethash 'chess-cn--piece-blue-jiang (plist-get chess-cn--playing 'piece-cords)))
+        (red-shuai-cord (gethash 'chess-cn--piece-red-shuai (plist-get chess-cn--playing 'piece-cords))))
   (and
    ;;(message "%s,   %s" blue-jiang-cord red-shuai-cord)
    (equal (car blue-jiang-cord) (car red-shuai-cord))
-   (chess-cn--accumulate
+   (chess-cn--accumulate-list
     (mapcar
      (lambda (x) (cons (car blue-jiang-cord) x))
      (chess-cn--get-range-between (cdr blue-jiang-cord) (cdr red-shuai-cord)))
@@ -595,25 +612,20 @@ is-move t 为移动, nil 为吃子
 
 (defun chess-cn--king-under-threat-p (side)
   "判断指定方的将/帅是否面临威胁"
-  (let ((king-cord (plist-get
+  (let ((king-cord (gethash
+                    (if (eq side 'chess-cn--side-red) 'chess-cn--piece-red-shuai 'chess-cn--piece-blue-jiang)
                     (plist-get chess-cn--playing 'piece-cords)
-                    (if (eq side 'chess-cn--side-red) 'chess-cn--piece-red-shuai 'chess-cn--piece-blue-jiang))))
-  (chess-cn--accumulate
+                    )))
+  (chess-cn--accumulate-hashtab
    (plist-get chess-cn--playing 'piece-cords)
-   (lambda (piece-or-cord)
-     (when (symbolp piece-or-cord) ;; 只处理棋子符号，忽略坐标，达到遍历属性的目的
-       (if (or (null piece-or-cord) (eq side (plist-get (symbol-value piece-or-cord) 'side)))
-          nil ;; 己方棋子对己方将帅无威胁
-          (let ((aginst-cord (plist-get (plist-get chess-cn--playing 'piece-cords) piece-or-cord)))
+   (lambda (piece cord)
+       (if (or (null cord) (eq side (plist-get (symbol-value piece) 'side)))
+          nil ;; 已被吃掉的棋子和己方棋子对己方将帅无威胁
             (and
-               ;;(message "compute king-under-thread-p side: %s, piece-or-cord: %s, king-cord: %s aginst-cord: %s" side piece-or-cord king-cord aginst-cord)
-              aginst-cord ;; 坐标为空的棋子为已被吃掉的棋子
-              (chess-cn--move-kill-base-rule aginst-cord king-cord) ;; 棋盘基本规则，不可越界，不可原地踏步
-              (chess-cn--piece-type-rule-verify aginst-cord king-cord 'kill-rule) ;; 兵种吃子规则校验
-              ;;(message "king %s under threat from %s" king-cord aginst-cord)
+              (chess-cn--move-kill-base-rule cord king-cord) ;; 棋盘基本规则，不可越界，不可原地踏步
+              (chess-cn--piece-type-rule-verify cord king-cord 'kill-rule) ;; 兵种吃子规则校验
               ;; 不再判断是否见面，因为如果通过了吃子规则的话，将帅就已经可被吃了
-           )
-          ))))
+           )))
    nil
    'chess-cn--or-fun
    'identity))
@@ -632,9 +644,8 @@ is-move t 为移动, nil 为吃子
   "枚举当前棋局下，指定棋子的所有可能的走法
 
 结果形如 ((oldcord . dstcord) ...)"
-  (let ((curt-cord (plist-get (plist-get chess-cn--playing 'piece-cords) piece))
+  (let ((curt-cord (gethash piece (plist-get chess-cn--playing 'piece-cords)))
         (side (plist-get (symbol-value piece) 'side)))
-    ;;(message "enum-rule of %s is %s" piece (plist-get (symbol-value (plist-get (symbol-value piece) 'type)) 'enum-rule))
     (if curt-cord
         (mapcar (lambda (dstcord) (list 'piece piece 'oldcord curt-cord 'dstcord dstcord))
                 (funcall (plist-get (symbol-value (plist-get (symbol-value piece) 'type)) 'enum-rule) side curt-cord))
@@ -644,16 +655,12 @@ is-move t 为移动, nil 为吃子
   "枚举当前棋局下，指定方所有可能的走法
 
 结果形如 ((oldcord . dstcord) ...)"
-  (chess-cn--accumulate
+  (chess-cn--accumulate-hashtab
    (plist-get chess-cn--playing 'piece-cords)
-   (lambda (piece-or-cord)
-     ;;(message "计算 %s %s 位置处的 %s 的走法列表" side (plist-get (plist-get chess-cn--playing 'piece-cords) piece-or-cord) piece-or-cord)
-     (when (and piece-or-cord
-                (symbolp piece-or-cord)
-                (eq side (plist-get (symbol-value piece-or-cord) 'side))
-                (plist-get (plist-get chess-cn--playing 'piece-cords) piece-or-cord))
-       ;;(message "%s 位置处的 %s 所有可能的走法: %s" (plist-get (plist-get chess-cn--playing 'piece-cords) piece-or-cord) piece-or-cord (chess-cn--enum-any-move-or-kill-of-piece piece-or-cord))
-         (chess-cn--enum-any-move-or-kill-of-piece piece-or-cord)))
+   (lambda (piece cord)
+     ;;(message "计算 %s %s 位置处的 %s 的走法列表" side (gethash piece (plist-get chess-cn--playing 'piece-cords)) piece)
+     (when (and cord (eq side (plist-get (symbol-value piece) 'side)))
+         (chess-cn--enum-any-move-or-kill-of-piece piece)))
    nil
    'chess-cn--concat-list)
   )
@@ -684,9 +691,6 @@ is-move t 为移动, nil 为吃子
 
 (defun chess-cn--move-piece (oldcord dstcord)
   "移动棋子"
-  ;;(plist-put (plist-get chess-cn--playing 'piece-cords) (chess-cn--get-piece-from-situation oldcord) dstcord)
-  ;;(chess-cn--set-piece-to-situation dstcord (chess-cn--get-piece-from-situation oldcord))
-  ;;(chess-cn--set-piece-to-situation oldcord nil)
   (chess-cn--move-piece-impl (chess-cn--get-piece-from-situation oldcord) oldcord dstcord)
   (plist-put chess-cn--playing 'curt-selected-cord nil)
   (plist-put chess-cn--playing 'curt-side (chess-cn--get-other-side (plist-get chess-cn--playing 'curt-side)))
@@ -726,11 +730,6 @@ is-move t 为移动, nil 为吃子
   (progn
     (let ((killed-piece (chess-cn--get-piece-from-situation dstcord))
           (kill-piece (chess-cn--get-piece-from-situation oldcord)))
-      ;;(message (format "%s 被吃掉." killed-piece))
-      ;;(plist-put (plist-get chess-cn--playing 'piece-cords) kill-piece dstcord)
-      ;;(plist-put (plist-get chess-cn--playing 'piece-cords) killed-piece nil)
-      ;;(chess-cn--set-piece-to-situation dstcord kill-piece)
-      ;;(chess-cn--set-piece-to-situation oldcord nil)
       (chess-cn--remove-piece-impl killed-piece dstcord)
       (chess-cn--move-piece-impl kill-piece oldcord dstcord)
       (plist-put chess-cn--playing 'curt-selected-cord nil)
@@ -831,7 +830,7 @@ is-move t 为移动, nil 为吃子
   (and
    (chess-cn--move-line-rule oldcord dstcord)
    (not
-    (chess-cn--accumulate
+    (chess-cn--accumulate-list
      (cond
       ((equal (car oldcord) (car dstcord))
        (mapcar (lambda (x) (cons (car oldcord) x))
@@ -896,7 +895,7 @@ is-move t 为移动, nil 为吃子
    (chess-cn--move-line-rule oldcord dstcord)
    (equal
     1
-    (chess-cn--accumulate
+    (chess-cn--accumulate-list
      (cond
       ((equal (car oldcord) (car dstcord))
        (mapcar (lambda (x) (cons (car oldcord) x))
@@ -1070,8 +1069,6 @@ is-move t 为移动, nil 为吃子
   (set-marker chess-cn--board-end (point)) ;; 棋盘结束位置标记
   (chess-cn--playing-init) ;; 对弈信息初始化
   (chess-cn--draw-board-by-situation (plist-get chess-cn--playing 'situation)) ;; 绘制棋盘
-  ;;(message "红炮二坐标 %s" (chess-cn--get-piece-cord 'chess-cn--piece-red-pao-2)) ;; test
-  ;;(message "%s" (chess-cn--get-piece-cords-by-scan-situation))
   (chess-cn--move-point-to '(0 . 0))) ;; 初始化光标位置
 
 (defun chess-cn--undo ()
@@ -1090,13 +1087,7 @@ is-move t 为移动, nil 为吃子
                    'side))
       (let ((kill-piece (chess-cn--get-piece-from-situation (plist-get last-history 'dstcord)))
             (killed-piece (plist-get last-history 'killed-piece)))
-        ;; 恢复吃子，移回旧位置
-        ;;(plist-put (plist-get chess-cn--playing 'piece-cords) kill-piece (plist-get last-history 'oldcord))
-        ;;(chess-cn--set-piece-to-situation (plist-get last-history 'oldcord) kill-piece)
         (chess-cn--move-piece-impl kill-piece (plist-get last-history 'dstcord) (plist-get last-history 'oldcord)) 
-        ;; 如果有吃子，恢复被吃子到棋盘上
-        ;;(plist-put (plist-get chess-cn--playing 'piece-cords) killed-piece (plist-get last-history 'dstcord))
-        ;;(chess-cn--set-piece-to-situation (plist-get last-history 'dstcord) killed-piece))
         (when killed-piece
           (chess-cn--restore-piece-impl killed-piece (plist-get last-history 'dstcord))))
       (chess-cn--draw-board-by-situation (plist-get chess-cn--playing 'situation)) ;; 绘制棋盘
